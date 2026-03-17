@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "PageTweaker",
+  "version": "3.0.0",
+  "description": "Verwandelt jede Webseite in einen visuellen Page Builder mit Drag & Drop",
+  "permissions": ["storage", "activeTab", "scripting"],
+  "action": {
+    "default_popup": "src/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/restorer.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["src/scanner.js", "src/mockup-renderer.js", "src/builder.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

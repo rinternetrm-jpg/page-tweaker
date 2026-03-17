@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 320px;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      padding: 16px;
+    }
+    .pt-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #2a2a4a;
+    }
+    .pt-logo {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+    .pt-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .pt-version {
+      font-size: 11px;
+      color: #888;
+      margin-left: auto;
+    }
+    .pt-status {
+      background: #2a2a4a;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+      font-size: 13px;
+    }
+    .pt-status-label {
+      color: #888;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+    .pt-status-value {
+      color: #fff;
+      font-weight: 500;
+    }
+    .pt-status-value.supported { color: #4ade80; }
+    .pt-status-value.unsupported { color: #f87171; }
+    .pt-btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 8px;
+      transition: all 0.2s;
+    }
+    .pt-btn-primary {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+    }
+    .pt-btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+    .pt-btn-primary:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .pt-btn-secondary {
+      background: #2a2a4a;
+      color: #ccc;
+    }
+    .pt-btn-secondary:hover { background: #3a3a5a; }
+    .pt-saved-info {
+      background: #1a2a1a;
+      border: 1px solid #2a4a2a;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      color: #4ade80;
+      display: none;
+    }
+    .pt-footer {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #2a2a4a;
+      font-size: 11px;
+      color: #666;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="pt-header">
+    <div class="pt-logo">🔧</div>
+    <span class="pt-title">PageTweaker</span>
+    <span class="pt-version">v3.0</span>
+  </div>
+
+  <div class="pt-status">
+    <div class="pt-status-label">Aktuelle Seite</div>
+    <div class="pt-status-value" id="currentUrl">—</div>
+  </div>
+
+  <div class="pt-status">
+    <div class="pt-status-label">Seitentyp</div>
+    <div class="pt-status-value" id="pageType">Wird erkannt...</div>
+  </div>
+
+  <div class="pt-saved-info" id="savedInfo">
+    Gespeichertes Layout vorhanden
+  </div>
+
+  <button class="pt-btn pt-btn-primary" id="btnOpen" disabled>
+    Page Builder öffnen
+  </button>
+
+  <button class="pt-btn pt-btn-secondary" id="btnClear" style="display:none">
+    Gespeichertes Layout löschen
+  </button>
+
+  <div class="pt-footer">
+    PageTweaker v3 — YouTube Watch Page PoC
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

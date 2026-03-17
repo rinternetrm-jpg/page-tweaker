@@ -1,0 +1,4 @@
+icons/generate_icons.py
+*.pyc
+.DS_Store
+Thumbs.db
