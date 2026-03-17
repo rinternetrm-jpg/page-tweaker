@@ -35,19 +35,25 @@
       this.theme = theme === 'dark' ? 'dark' : 'light';
     }
 
-    // === Video Player Mockup ===
+    // === Video Player — Thumbnail als Platzhalter im Builder ===
     renderVideoPlayer(data, width = 640, height = 360) {
       const el = document.createElement('div');
       el.className = 'pt-mockup pt-mockup-video-player';
       el.style.cssText = `
         width: ${width}px; height: ${height}px; position: relative;
-        background: #000 url('${this._escUrl(data.thumbnailUrl)}') center/cover no-repeat;
-        border-radius: 12px; overflow: hidden; cursor: default;
+        background: #000; border-radius: 12px; overflow: hidden; cursor: default;
         font-family: system-ui, -apple-system, sans-serif;
       `;
 
-      // Play Button Overlay
+      // Thumbnail als <img> (robuster als CSS background)
+      const thumbUrl = data.thumbnailUrl || '';
+      const fallback1 = (data.thumbnailFallbacks && data.thumbnailFallbacks[0]) || '';
+      const fallback2 = (data.thumbnailFallbacks && data.thumbnailFallbacks[1]) || '';
+
       el.innerHTML = `
+        <img src="${this._esc(thumbUrl)}"
+             onerror="this.src='${this._esc(fallback1)}'; this.onerror=function(){this.src='${this._esc(fallback2)}';this.onerror=null;}"
+             style="width:100%;height:100%;object-fit:cover;display:block;">
         <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
           <div style="width:68px;height:48px;background:rgba(0,0,0,0.7);border-radius:12px;
                       display:flex;align-items:center;justify-content:center;">
@@ -55,34 +61,11 @@
                         border-bottom:12px solid transparent;margin-left:4px;"></div>
           </div>
         </div>
-        <div style="position:absolute;bottom:0;left:0;right:0;height:40px;
-                    background:linear-gradient(transparent, rgba(0,0,0,0.7));padding:8px 12px;
-                    display:flex;align-items:flex-end;justify-content:space-between;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <div style="width:0;height:0;border-left:10px solid #fff;border-top:6px solid transparent;
-                        border-bottom:6px solid transparent;"></div>
-            <div style="width:16px;height:12px;display:flex;flex-direction:column;justify-content:center;">
-              <div style="width:16px;height:2px;background:#fff;border-radius:1px;"></div>
-            </div>
-          </div>
-          <div style="background:rgba(0,0,0,0.8);color:#fff;font-size:12px;padding:2px 6px;
-                      border-radius:3px;font-weight:500;">${data.duration || '0:00'}</div>
-        </div>
-        <div style="position:absolute;bottom:40px;left:0;right:0;height:4px;background:rgba(255,255,255,0.2);">
-          <div style="width:0%;height:100%;background:#f00;border-radius:0 2px 2px 0;"></div>
+        <div style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.8);color:#fff;
+                    font-size:12px;padding:2px 6px;border-radius:3px;font-weight:500;">
+          ${data.duration || '0:00'}
         </div>
       `;
-
-      // Fallback bei Bild-Fehler
-      const bgCheck = new Image();
-      bgCheck.onerror = () => {
-        if (data.thumbnailFallbacks && data.thumbnailFallbacks.length > 0) {
-          el.style.backgroundImage = `url('${this._escUrl(data.thumbnailFallbacks[0])}')`;
-        } else {
-          el.style.background = 'linear-gradient(135deg, #1a1a2e, #16213e)';
-        }
-      };
-      bgCheck.src = data.thumbnailUrl;
 
       return el;
     }
@@ -224,10 +207,12 @@
     }
 
     // === Recommendations / Thumbnail Grid Mockup ===
-    renderRecommendations(data, options = { columns: 1, thumbnailWidth: 168, maxItems: 10 }) {
+    renderRecommendations(data, options = { columns: 1, thumbnailWidth: 168, maxItems: 10, showTitle: true, showMeta: true }) {
       const cols = options.columns || 1;
       const thumbW = options.thumbnailWidth || 168;
       const maxItems = options.maxItems || 10;
+      const showTitle = options.showTitle !== false;
+      const showMeta = options.showMeta !== false;
       const items = (data.items || []).slice(0, maxItems);
 
       const el = document.createElement('div');
@@ -254,23 +239,27 @@
           ? 'display:flex;flex-direction:column;gap:8px;'
           : 'display:flex;gap:8px;';
 
+        const videoIdAttr = item.videoId ? `data-video-id="${this._esc(item.videoId)}"` : '';
+        const hoverStyle = item.videoId ? 'cursor:pointer;' : '';
+
         html += `
-          <div style="${containerStyle}">
+          <div style="${containerStyle}${hoverStyle}" ${videoIdAttr}
+               onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
             <div style="${thumbStyle}">
               ${thumbSrc ? `<img src="${this._esc(thumbSrc)}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">` : ''}
               ${item.duration ? `<div style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.8);
                 color:#fff;font-size:11px;padding:1px 4px;border-radius:3px;font-weight:500;">
                 ${this._esc(item.duration)}</div>` : ''}
             </div>
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:13px;font-weight:500;line-height:1.3;color:${this.c.textPrimary};
+            ${(showTitle || showMeta) ? `<div style="flex:1;min-width:0;">
+              ${showTitle ? `<div style="font-size:13px;font-weight:500;line-height:1.3;color:${this.c.textPrimary};
                           display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
-                ${this._esc(item.title)}</div>
-              <div style="font-size:12px;color:${this.c.textSecondary};margin-top:3px;">
+                ${this._esc(item.title)}</div>` : ''}
+              ${showMeta ? `<div style="font-size:12px;color:${this.c.textSecondary};margin-top:3px;">
                 ${this._esc(item.channelName)}</div>
               <div style="font-size:12px;color:${this.c.textSecondary};">
-                ${this._esc(item.viewCount)}${item.timeAgo ? ' · ' + this._esc(item.timeAgo) : ''}</div>
-            </div>
+                ${this._esc(item.viewCount)}${item.timeAgo ? ' · ' + this._esc(item.timeAgo) : ''}</div>` : ''}
+            </div>` : ''}
           </div>
         `;
       }

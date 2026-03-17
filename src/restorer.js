@@ -25,8 +25,14 @@
     // Warten bis Seite bereit ist (YouTube ist eine SPA, DOM braucht Zeit)
     await waitForPageReady();
 
-    // Floating-Buttons anzeigen (nicht automatisch restoren)
-    showFloatingButtons(layout);
+    // Wenn pt_auto_apply gesetzt ist (Thumbnail-Klick), Layout automatisch anwenden
+    const autoApply = await chrome.storage.local.get('pt_auto_apply');
+    if (autoApply.pt_auto_apply) {
+      await chrome.storage.local.remove('pt_auto_apply');
+      applyLayout(layout);
+    } else {
+      showFloatingButtons(layout);
+    }
   }
 
   // === Auf YouTube-Seitenlade warten ===
@@ -105,13 +111,10 @@
   async function applyLayout(layout) {
     removeFloatingButtons();
 
-    // Scanner + Renderer im ISOLATED world via chrome.runtime.sendMessage
-    // Da wir ein Content Script sind, nutzen wir executeScript über den Background
-    // Alternative: Direkt die Skripte im Content Script world importieren
-    await executeInCurrentWorld('src/scanner.js');
-    await new Promise(r => setTimeout(r, 300));
-    await executeInCurrentWorld('src/mockup-renderer.js');
-    await new Promise(r => setTimeout(r, 100));
+    // Scanner + Renderer injizieren
+    await injectViaBackground(['src/scanner.js']);
+    await new Promise(r => setTimeout(r, 600));
+    await injectViaBackground(['src/mockup-renderer.js']);
 
     const scanResult = window.__ptScanResult;
     const renderer = window.__ptMockupRenderer;
@@ -121,23 +124,39 @@
       return;
     }
 
-    // Theme setzen
     if (layout.bgColor === '#0f0f0f') {
       renderer.setTheme('dark');
     }
 
-    // Original-Body ersetzen
-    document.body.innerHTML = '';
-    document.body.style.cssText = `
-      margin: 0; padding: 0; background: ${layout.bgColor || '#ffffff'};
-      min-height: 100vh; position: relative;
+    // === Original-Seite VERSTECKEN, nicht zerstören ===
+    const origApp = document.querySelector('ytd-app');
+    if (origApp) {
+      origApp.style.cssText = 'visibility:hidden !important; pointer-events:none !important;';
+      origApp.dataset.ptOriginal = 'true';
+    }
+
+    // Echten YouTube-Player merken
+    const playerContainer = document.querySelector('#player-container-inner') ||
+                            document.querySelector('#player-container') ||
+                            document.querySelector('ytd-player');
+    const moviePlayer = document.querySelector('#movie_player');
+
+    // Canvas erstellen
+    const canvas = document.createElement('div');
+    canvas.id = 'pt-restored-canvas';
+    canvas.style.cssText = `
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      overflow: auto; z-index: 99999;
+      background: ${layout.bgColor || '#ffffff'};
     `;
 
-    const canvas = document.createElement('div');
-    canvas.style.cssText = `
-      width: ${layout.canvasWidth || 1200}px;
-      margin: 0 auto; position: relative; min-height: 100vh;
+    const inner = document.createElement('div');
+    inner.style.cssText = `
+      width: 100%; position: relative; min-height: 100vh;
     `;
+
+    // Variablen für Video-Player Position
+    let videoWrapper = null;
 
     // Items platzieren
     for (const item of layout.items) {
@@ -154,6 +173,13 @@
       switch (item.type) {
         case 'video-player':
           mockup = renderer.renderVideoPlayer(comp.data, item.w, item.h);
+          // Nur der Player mit useRealPlayer bekommt den echten YouTube-Player
+          if (!item.options || item.options.useRealPlayer !== false) {
+            if (!videoWrapper) videoWrapper = wrapper; // Erster oder markierter
+          }
+          if (item.options && item.options.useRealPlayer) {
+            videoWrapper = wrapper; // Explizit markierter hat Vorrang
+          }
           break;
         case 'video-metadata':
           mockup = renderer.renderMetadata(comp.data);
@@ -178,18 +204,116 @@
       }
 
       wrapper.appendChild(mockup);
-      canvas.appendChild(wrapper);
+      inner.appendChild(wrapper);
     }
 
+    canvas.appendChild(inner);
     document.body.appendChild(canvas);
     isRestored = true;
+
+    // === Thumbnails klickbar machen — Video wechseln bei Klick ===
+    // YouTube's Player-API ist nur im MAIN world verfügbar,
+    // nicht im isolated world wo Content Scripts laufen.
+    // Daher: Message an Background → executeScript mit world:'MAIN'
+    canvas.querySelectorAll('.pt-mockup-recommendations [data-video-id]').forEach(thumb => {
+      thumb.style.cursor = 'pointer';
+      thumb.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const videoId = thumb.dataset.videoId;
+        if (!videoId) return;
+
+        console.log('[PageTweaker] Video wechseln zu:', videoId);
+
+        // Flag setzen damit der Restorer das Layout automatisch anwendet
+        chrome.storage.local.set({ pt_auto_apply: true }, () => {
+          // Echten Page-Reload erzwingen (nicht YouTube SPA-Navigation)
+          // location.replace + volle URL verhindert SPA-Interception
+          const newUrl = window.location.origin + '/watch?v=' + videoId;
+          window.stop(); // Aktuelle Seite stoppen
+          window.location.replace(newUrl);
+        });
+      });
+    });
+
+    // === Echten YouTube-Player über die Video-Position legen ===
+    if (videoWrapper && moviePlayer) {
+      // Platzhalter-Bild entfernen
+      const mockupEl = videoWrapper.querySelector('.pt-mockup-video-player');
+      if (mockupEl) {
+        mockupEl.innerHTML = '';
+        mockupEl.style.background = '#000';
+      }
+
+      // Player aus ytd-app herausnehmen und direkt in body hängen.
+      document.body.appendChild(moviePlayer);
+
+      // CSS-Overrides für alle internen Player-Elemente
+      const playerStyle = document.createElement('style');
+      playerStyle.id = 'pt-player-overrides';
+      playerStyle.textContent = `
+        #movie_player.pt-repositioned {
+          position: fixed !important;
+          z-index: 100000 !important;
+          pointer-events: auto !important;
+          overflow: hidden !important;
+          border-radius: 12px !important;
+        }
+        #movie_player.pt-repositioned .html5-video-container,
+        #movie_player.pt-repositioned .html5-video-container video {
+          width: 100% !important;
+          height: 100% !important;
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          object-fit: cover !important;
+        }
+        #movie_player.pt-repositioned .ytp-chrome-bottom {
+          width: 100% !important;
+          left: 0 !important;
+          box-sizing: border-box !important;
+          padding: 0 12px !important;
+        }
+        #movie_player.pt-repositioned .ytp-progress-bar-container {
+          width: 100% !important;
+        }
+      `;
+      document.head.appendChild(playerStyle);
+      moviePlayer.classList.add('pt-repositioned');
+
+      // Video-Item Daten aus dem Layout
+      const videoItem = layout.items.find(i => i.type === 'video-player');
+      const savedW = videoItem ? videoItem.w : 640;
+      const savedH = videoItem ? videoItem.h : 360;
+
+      const updatePlayerPos = () => {
+        // Position direkt aus dem Wrapper berechnen (exakte Koordinaten)
+        const wrapperRect = videoWrapper.getBoundingClientRect();
+        moviePlayer.style.left = wrapperRect.left + 'px';
+        moviePlayer.style.top = wrapperRect.top + 'px';
+        moviePlayer.style.width = savedW + 'px';
+        moviePlayer.style.height = savedH + 'px';
+      };
+
+      // Initial positionieren + kurz warten bis DOM stabil
+      updatePlayerPos();
+      setTimeout(updatePlayerPos, 300);
+      setTimeout(() => {
+        updatePlayerPos();
+        window.dispatchEvent(new Event('resize'));
+      }, 600);
+
+      // Bei Scroll aktualisieren
+      canvas.addEventListener('scroll', updatePlayerPos);
+      window.addEventListener('resize', updatePlayerPos);
+    }
 
     // "Original anzeigen" Button
     const btnOriginal = document.createElement('button');
     btnOriginal.id = 'pt-show-original';
     btnOriginal.textContent = 'Original anzeigen';
     btnOriginal.style.cssText = `
-      position: fixed; bottom: 20px; right: 20px; z-index: 999999;
+      position: fixed; bottom: 20px; right: 20px; z-index: 200000;
       background: rgba(0,0,0,0.7); color: #fff; border: none; border-radius: 8px;
       padding: 10px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
       font-family: system-ui, -apple-system, sans-serif;
@@ -206,28 +330,24 @@
   async function openBuilder() {
     removeFloatingButtons();
 
-    await executeInCurrentWorld('src/scanner.js');
-    await new Promise(r => setTimeout(r, 400));
-    await executeInCurrentWorld('src/mockup-renderer.js');
-    await new Promise(r => setTimeout(r, 100));
-    await executeInCurrentWorld('src/builder.js');
+    await injectViaBackground(['src/scanner.js']);
+    await new Promise(r => setTimeout(r, 600));
+    await injectViaBackground(['src/mockup-renderer.js', 'src/builder.js']);
   }
 
-  // === Script im gleichen (ISOLATED) World ausführen ===
-  // Content Scripts laufen im ISOLATED world. Um Scanner/Renderer/Builder
-  // im gleichen World zu haben (damit window.__pt* geteilt wird),
-  // laden wir die Dateien per fetch + eval statt per <script> Tag.
-  async function executeInCurrentWorld(path) {
-    try {
-      const url = chrome.runtime.getURL(path);
-      const response = await fetch(url);
-      const code = await response.text();
-      // Ausführung im ISOLATED world (gleicher Kontext wie dieses Script)
-      const fn = new Function(code);
-      fn();
-    } catch (e) {
-      console.warn('[PageTweaker] Fehler beim Laden von', path, e);
-    }
+  // === Scripts über Background Service Worker injizieren ===
+  // Content Scripts können weder chrome.scripting nutzen noch new Function()
+  // (wird von YouTube's CSP blockiert). Daher bitten wir den Service Worker
+  // die Scripts per chrome.scripting.executeScript zu injizieren.
+  function injectViaBackground(files) {
+    return new Promise((resolve) => {
+      chrome.runtime.sendMessage({ action: 'injectScripts', files }, (resp) => {
+        if (chrome.runtime.lastError) {
+          console.warn('[PageTweaker] Background injection error:', chrome.runtime.lastError);
+        }
+        resolve(resp);
+      });
+    });
   }
 
   // === YouTube SPA-Navigation ===

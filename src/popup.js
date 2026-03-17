@@ -44,33 +44,17 @@
   }
 
   // Page Builder öffnen
-  btnOpen.addEventListener('click', async () => {
+  btnOpen.addEventListener('click', () => {
     if (!isYouTubeWatch) return;
 
-    // Scanner injizieren
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      files: ['src/scanner.js']
+    // Alles an den Background Service Worker delegieren.
+    // Der läuft weiter auch wenn das Popup sich schließt.
+    chrome.runtime.sendMessage({
+      action: 'launchBuilder',
+      tabId: tab.id
     });
 
-    // Kurz warten bis Scanner fertig
-    await new Promise(r => setTimeout(r, 500));
-
-    // Mockup Renderer injizieren
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      files: ['src/mockup-renderer.js']
-    });
-
-    // Kurz warten bis Renderer bereit
-    await new Promise(r => setTimeout(r, 100));
-
-    // Builder injizieren
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      files: ['src/builder.js']
-    });
-
+    // Popup sofort schließen
     window.close();
   });
 

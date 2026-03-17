@@ -1,6 +1,7 @@
 // scanner.js — Scannt YouTube Watch-Page und extrahiert strukturierte Daten
 (function () {
-  if (window.__ptScanResult) return;
+  // Erlaubt Re-Scan wenn Ergebnis explizit auf null gesetzt wurde
+  if (window.__ptScanResult && window.__ptScanResult.url === window.location.href) return;
 
   // === Utility Funktionen ===
 
@@ -212,43 +213,75 @@
 
   function extractRecommendations() {
     try {
-      const items = safeQueryAll([
-        'ytd-watch-next-secondary-results-renderer ytd-compact-video-renderer',
-        '#secondary #related ytd-compact-video-renderer',
-        'ytd-watch-next-secondary-results-renderer ytd-rich-grid-media'
+      // Neue YouTube-Version: yt-lockup-view-model
+      let items = safeQueryAll([
+        'ytd-item-section-renderer #contents > yt-lockup-view-model',
+        'ytd-watch-next-secondary-results-renderer yt-lockup-view-model',
+        '#secondary yt-lockup-view-model',
       ]);
+
+      // Fallback: alte Versionen
+      if (items.length === 0) {
+        items = safeQueryAll([
+          'ytd-watch-next-secondary-results-renderer ytd-compact-video-renderer',
+          '#secondary ytd-compact-video-renderer',
+          '#secondary ytd-rich-item-renderer',
+        ]);
+      }
 
       if (items.length === 0) return null;
 
       const recommendations = items.slice(0, 30).map(el => {
         try {
-          const title = el.querySelector('#video-title')?.textContent?.trim() ||
-                        el.querySelector('.title')?.textContent?.trim() || 'Video';
-
-          const thumbnailImg = el.querySelector('ytd-thumbnail img') ||
-                               el.querySelector('img.yt-core-image') ||
-                               el.querySelector('img');
-          const thumbnailUrl = thumbnailImg?.src || null;
-
-          const channelName = el.querySelector('ytd-channel-name yt-formatted-string')?.textContent?.trim() ||
-                              el.querySelector('.ytd-channel-name')?.textContent?.trim() || '';
-
-          const metaLines = el.querySelectorAll('#metadata-line span');
-          const viewCount = metaLines[0]?.textContent?.trim() || '';
-          const timeAgo = metaLines[1]?.textContent?.trim() || '';
-
-          const duration = el.querySelector('ytd-thumbnail-overlay-time-status-renderer #text')?.textContent?.trim() ||
-                           el.querySelector('.ytd-thumbnail-overlay-time-status-renderer')?.textContent?.trim() || '';
-
-          // VideoId aus Link
-          const link = el.querySelector('a#thumbnail') || el.querySelector('a');
+          // Video-Link und ID
+          const link = el.querySelector('a[href*="/watch?v="]') ||
+                       el.querySelector('a#thumbnail') ||
+                       el.querySelector('a');
           let videoId = null;
           if (link?.href) {
             try {
-              const u = new URL(link.href);
+              const u = new URL(link.href, location.origin);
               videoId = u.searchParams.get('v');
             } catch { /* ignore */ }
           }
+
+          // Titel
+          const title = el.querySelector('h3')?.textContent?.trim() ||
+                        el.querySelector('#video-title')?.textContent?.trim() ||
+                        el.querySelector('[class*="title"]')?.textContent?.trim() || 'Video';
+
+          // Thumbnail
+          const thumbnailImg = el.querySelector('yt-thumbnail-view-model img') ||
+                               el.querySelector('ytd-thumbnail img') ||
+                               el.querySelector('img.yt-core-image') ||
+                               el.querySelector('img');
+          let thumbnailUrl = thumbnailImg?.src || null;
+          // Fallback: aus videoId generieren
+          if ((!thumbnailUrl || thumbnailUrl.startsWith('data:')) && videoId) {
+            thumbnailUrl = `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+          }
+
+          // Kanal
+          const channelName = el.querySelector('ytd-channel-name yt-formatted-string')?.textContent?.trim() ||
+                              el.querySelector('[class*="channel"]')?.textContent?.trim() ||
+                              el.querySelector('.ytd-channel-name')?.textContent?.trim() || '';
+
+          // Metadaten (Views, Alter)
+          const metaTexts = Array.from(el.querySelectorAll('span, [class*="metadata"], [class*="meta"]'))
+            .map(s => s.textContent?.trim())
+            .filter(t => t && (t.includes('Aufrufe') || t.includes('views') || t.includes('Std.') ||
+                               t.includes('Tag') || t.includes('Woche') || t.includes('Monat') ||
+                               t.includes('Jahr') || t.includes('ago') || t.includes('hr') ||
+                               t.includes('day') || t.includes('week')));
+          const viewCount = metaTexts[0] || '';
+          const timeAgo = metaTexts[1] || '';
+
+          // Duration
+          const duration = el.querySelector('[class*="time-status"] [class*="text"]')?.textContent?.trim() ||
+                           el.querySelector('ytd-thumbnail-overlay-time-status-renderer #text')?.textContent?.trim() ||
+                           el.querySelector('badge-shape [class*="badge"]')?.textContent?.trim() || '';
+
+          if (!videoId && !title) return null;
 
           return { title, thumbnailUrl, channelName, viewCount, timeAgo, duration, videoId };
         } catch {
@@ -256,6 +289,7 @@
         }
       }).filter(Boolean);
 
+      if (recommendations.length === 0) return null;
       return { items: recommendations };
     } catch (e) {
       console.warn('[PageTweaker] Scanner: Recommendations Fehler', e);
@@ -315,24 +349,48 @@
   }
 
   // === Scan ausführen ===
+  // Erst sofort scannen, dann ggf. nachladen wenn Empfehlungen fehlen
+
+  function runScan() {
+    return {
+      pageType: 'youtube-watch',
+      url: window.location.href,
+      scannedAt: Date.now(),
+      components: [
+        { type: 'video-player', data: extractVideoPlayer() },
+        { type: 'video-metadata', data: extractMetadata() },
+        { type: 'channel-info', data: extractChannel() },
+        { type: 'description', data: extractDescription() },
+        { type: 'comments', data: extractComments() },
+        { type: 'recommendations', data: extractRecommendations() },
+        { type: 'playlist', data: extractPlaylist() },
+        { type: 'chat', data: extractChat() }
+      ].filter(c => c.data !== null)
+    };
+  }
 
   const startTime = performance.now();
+  window.__ptScanResult = runScan();
 
-  window.__ptScanResult = {
-    pageType: 'youtube-watch',
-    url: window.location.href,
-    scannedAt: Date.now(),
-    components: [
-      { type: 'video-player', data: extractVideoPlayer() },
-      { type: 'video-metadata', data: extractMetadata() },
-      { type: 'channel-info', data: extractChannel() },
-      { type: 'description', data: extractDescription() },
-      { type: 'comments', data: extractComments() },
-      { type: 'recommendations', data: extractRecommendations() },
-      { type: 'playlist', data: extractPlaylist() },
-      { type: 'chat', data: extractChat() }
-    ].filter(c => c.data !== null)
-  };
+  const hasRecs = window.__ptScanResult.components.some(c => c.type === 'recommendations');
+
+  if (!hasRecs) {
+    // Empfehlungen laden bei YouTube oft verzögert — bis zu 3x nachscannen
+    let retries = 0;
+    const retryScan = () => {
+      retries++;
+      const recs = extractRecommendations();
+      if (recs) {
+        window.__ptScanResult.components.push({ type: 'recommendations', data: recs });
+        console.log(`[PageTweaker] Empfehlungen nachgeladen nach ${retries}. Versuch (${recs.items.length} Items)`);
+      } else if (retries < 5) {
+        setTimeout(retryScan, 1000);
+      } else {
+        console.log('[PageTweaker] Keine Empfehlungen gefunden nach 5 Versuchen');
+      }
+    };
+    setTimeout(retryScan, 1500);
+  }
 
   const scanTime = Math.round(performance.now() - startTime);
   console.log(`[PageTweaker] Scan abgeschlossen in ${scanTime}ms`, window.__ptScanResult);
