@@ -439,14 +439,27 @@
     // === Echte YouTube-Masthead IMMER oben fixieren ===
     const realMasthead = document.querySelector('ytd-masthead');
     if (realMasthead) {
+      // YouTube CSS-Variablen kopieren (werden von ytd-app geerbt)
+      const ytApp = document.querySelector('ytd-app');
+      if (ytApp) {
+        const ytStyles = getComputedStyle(ytApp);
+        ['--yt-spec-base-background', '--yt-spec-brand-background-solid', '--yt-spec-general-background-a',
+         '--yt-spec-text-primary', '--yt-spec-text-secondary', '--yt-spec-icon-inactive',
+         '--yt-spec-10-percent-layer', '--yt-spec-badge-chip-background', '--yt-spec-menu-background'
+        ].forEach(v => {
+          const val = ytStyles.getPropertyValue(v);
+          if (val) realMasthead.style.setProperty(v, val);
+        });
+      }
       document.body.appendChild(realMasthead);
-      realMasthead.style.cssText = `
+      realMasthead.style.cssText += `
         position: fixed !important;
         top: 0 !important; left: 0 !important;
         width: 100% !important;
         z-index: 100001 !important;
         visibility: visible !important;
         pointer-events: auto !important;
+        background: var(--yt-spec-base-background, #fff) !important;
       `;
       inner.style.paddingTop = '56px';
     }
