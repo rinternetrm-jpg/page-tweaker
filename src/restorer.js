@@ -253,6 +253,56 @@
       });
     });
 
+    // === Suche: Ergebnisse in Empfehlungs-Blöcke laden ===
+    document.addEventListener('pt-search', async (e) => {
+      const query = e.detail?.query;
+      if (!query) return;
+
+      console.log('[PageTweaker] Suche:', query);
+
+      // Suchergebnisse vom Background holen
+      chrome.runtime.sendMessage({ action: 'searchYouTube', query }, (resp) => {
+        if (!resp || !resp.ok || !resp.items.length) {
+          console.warn('[PageTweaker] Keine Suchergebnisse');
+          return;
+        }
+
+        console.log('[PageTweaker] Suchergebnisse:', resp.items.length);
+
+        // Alle Empfehlungs-Blöcke mit Suchergebnissen aktualisieren
+        const recWrappers = inner.querySelectorAll('.pt-mockup-recommendations');
+        recWrappers.forEach((oldRec, idx) => {
+          const parent = oldRec.parentElement;
+          const recItem = layout.items.filter(i => i.type === 'recommendations')[idx];
+          const opts = recItem?.options || {};
+          const offset = opts.offset || 0;
+          const maxItems = opts.maxItems || 10;
+
+          // Neue Daten mit Offset
+          const searchData = { items: resp.items.slice(offset, offset + maxItems) };
+          const newMockup = renderer.renderRecommendations(searchData, opts);
+          parent.innerHTML = '';
+          parent.appendChild(newMockup);
+
+          // Neue Thumbnails klickbar machen
+          parent.querySelectorAll('[data-video-id]').forEach(thumb => {
+            thumb.style.cursor = 'pointer';
+            thumb.addEventListener('click', (ev) => {
+              ev.preventDefault();
+              ev.stopPropagation();
+              const vid = thumb.dataset.videoId;
+              if (!vid) return;
+              chrome.storage.local.set({ pt_auto_apply: true }, () => {
+                const newUrl = window.location.origin + '/watch?v=' + vid;
+                window.stop();
+                window.location.replace(newUrl);
+              });
+            });
+          });
+        });
+      });
+    });
+
     // === Echten YouTube-Player über die Video-Position legen ===
     if (videoWrapper && moviePlayer) {
       // Platzhalter-Bild entfernen

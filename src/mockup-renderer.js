@@ -348,13 +348,14 @@
         </div>
       `;
 
-      // Suche funktional machen
+      // Suche funktional — Ergebnisse bleiben im PageTweaker Layout
       const form = el.querySelector('.pt-search-form');
       form.addEventListener('submit', (e) => {
         e.preventDefault();
         const query = el.querySelector('.pt-search-input').value.trim();
         if (query) {
-          window.location.href = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(query);
+          // Custom Event das der Restorer abfängt
+          document.dispatchEvent(new CustomEvent('pt-search', { detail: { query } }));
         }
       });
 

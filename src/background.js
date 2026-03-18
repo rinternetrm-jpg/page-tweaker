@@ -5,6 +5,64 @@
 // 3. CSP blockiert new Function() / eval auf YouTube
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.action === 'searchYouTube') {
+    // YouTube-Suche: HTML fetchen und Video-Daten extrahieren
+    const query = msg.query;
+    if (!query) return;
+
+    (async () => {
+      try {
+        const url = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(query);
+        const resp = await fetch(url);
+        const html = await resp.text();
+
+        // ytInitialData aus dem HTML extrahieren
+        const match = html.match(/var ytInitialData\s*=\s*(\{.+?\});\s*<\/script>/s);
+        if (!match) {
+          sendResponse({ ok: false, items: [] });
+          return;
+        }
+
+        const data = JSON.parse(match[1]);
+        const items = [];
+
+        // Video-Ergebnisse aus der verschachtelten Struktur extrahieren
+        function findVideos(obj) {
+          if (!obj || typeof obj !== 'object') return;
+          if (obj.videoRenderer) {
+            const vr = obj.videoRenderer;
+            const videoId = vr.videoId;
+            const title = vr.title?.runs?.[0]?.text || 'Video';
+            const channelName = vr.longBylineText?.runs?.[0]?.text ||
+                                vr.shortBylineText?.runs?.[0]?.text || '';
+            const viewCount = vr.viewCountText?.simpleText || vr.viewCountText?.runs?.[0]?.text || '';
+            const duration = vr.lengthText?.simpleText || '';
+            const thumbnailUrl = vr.thumbnail?.thumbnails?.pop()?.url ||
+                                 `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+
+            if (videoId) {
+              items.push({ videoId, title, channelName, viewCount, duration, thumbnailUrl, timeAgo: '' });
+            }
+          }
+          if (Array.isArray(obj)) {
+            obj.forEach(findVideos);
+          } else {
+            Object.values(obj).forEach(findVideos);
+          }
+        }
+
+        findVideos(data);
+        console.log('[PT Background] Suche:', query, '→', items.length, 'Ergebnisse');
+        sendResponse({ ok: true, items: items.slice(0, 30) });
+      } catch (e) {
+        console.error('[PT Background] Search error:', e);
+        sendResponse({ ok: false, items: [], error: e.message });
+      }
+    })();
+
+    return true; // async sendResponse
+  }
+
   if (msg.action === 'loadVideo') {
     // Video wechseln: YouTube SPA-Navigation triggern im MAIN world
     // So werden Empfehlungen, Kommentare etc. auch aktualisiert
