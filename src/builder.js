@@ -72,6 +72,53 @@
   setupCanvasEvents();
   setupKeyboardShortcuts();
 
+  // === Gespeichertes Layout laden (Edit-Modus) ===
+  if (window.__ptEditLayout) {
+    const editLayout = window.__ptEditLayout;
+    delete window.__ptEditLayout;
+
+    // Canvas-Einstellungen übernehmen
+    if (editLayout.canvasWidth) {
+      canvasWidth = editLayout.canvasWidth;
+      canvas.style.width = canvasWidth + 'px';
+      const widthSelect = document.getElementById('ptCanvasWidth');
+      if (widthSelect) {
+        const opt = Array.from(widthSelect.options).find(o => o.value === String(canvasWidth));
+        if (opt) opt.selected = true;
+      }
+    }
+    if (editLayout.bgColor) {
+      canvasBg = editLayout.bgColor;
+      canvas.style.background = canvasBg;
+      if (canvasBg === '#0f0f0f') {
+        theme = 'dark';
+        renderer.setTheme(theme);
+      }
+    }
+
+    // Items wiederherstellen
+    for (const savedItem of (editLayout.items || [])) {
+      const comp = scanResult.components.find(c => c.type === savedItem.type);
+      if (!comp && savedItem.type !== 'custom-text') continue;
+
+      const item = {
+        id: nextId++,
+        type: savedItem.type,
+        data: comp ? comp.data : {},
+        x: savedItem.x,
+        y: savedItem.y,
+        w: savedItem.w,
+        h: savedItem.h,
+        options: { ...getDefaultOptions(savedItem.type), ...(savedItem.options || {}) },
+      };
+
+      placedItems.push(item);
+      renderItem(item);
+    }
+    updatePaletteStatus();
+    console.log('[PT Builder] Layout geladen:', placedItems.length, 'Items');
+  }
+
   // === Palette aufbauen ===
   function buildPaletteHTML() {
     const typeLabels = {

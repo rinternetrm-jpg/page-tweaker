@@ -103,7 +103,7 @@
       padding: 10px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: all 0.2s;
     `;
-    btnEdit.addEventListener('click', () => openBuilder());
+    btnEdit.addEventListener('click', () => openBuilder(layout));
 
     container.appendChild(btnApply);
     container.appendChild(btnEdit);
@@ -336,27 +336,57 @@
       window.addEventListener('resize', updatePlayerPos);
     }
 
-    // "Original anzeigen" Button
+    // Buttons unten rechts
+    const btnContainer = document.createElement('div');
+    btnContainer.id = 'pt-restore-buttons';
+    btnContainer.style.cssText = `
+      position: fixed; bottom: 20px; right: 20px; z-index: 200000;
+      display: flex; gap: 8px; font-family: system-ui, -apple-system, sans-serif;
+    `;
+
+    const btnEdit = document.createElement('button');
+    btnEdit.textContent = 'Layout bearbeiten';
+    btnEdit.style.cssText = `
+      background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; border: none;
+      border-radius: 8px; padding: 10px 16px; font-size: 13px; font-weight: 600;
+      cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    `;
+    btnEdit.addEventListener('click', () => {
+      // Restored-Canvas entfernen
+      canvas.remove();
+      btnContainer.remove();
+      const hideFlash = document.getElementById('pt-hide-flash');
+      if (hideFlash) hideFlash.remove();
+      if (moviePlayer) moviePlayer.style.cssText = '';
+      isRestored = false;
+      openBuilder(layout);
+    });
+
     const btnOriginal = document.createElement('button');
-    btnOriginal.id = 'pt-show-original';
     btnOriginal.textContent = 'Original anzeigen';
     btnOriginal.style.cssText = `
-      position: fixed; bottom: 20px; right: 20px; z-index: 200000;
       background: rgba(0,0,0,0.7); color: #fff; border: none; border-radius: 8px;
       padding: 10px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
-      font-family: system-ui, -apple-system, sans-serif;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     `;
     btnOriginal.addEventListener('click', () => {
       isRestored = false;
       window.location.reload();
     });
-    document.body.appendChild(btnOriginal);
+
+    btnContainer.appendChild(btnEdit);
+    btnContainer.appendChild(btnOriginal);
+    document.body.appendChild(btnContainer);
   }
 
   // === Builder öffnen ===
-  async function openBuilder() {
+  async function openBuilder(existingLayout) {
     removeFloatingButtons();
+
+    // Gespeichertes Layout ans Builder-Window übergeben
+    if (existingLayout) {
+      window.__ptEditLayout = existingLayout;
+    }
 
     await injectViaBackground(['src/scanner.js']);
     await new Promise(r => setTimeout(r, 600));
