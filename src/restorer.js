@@ -164,27 +164,39 @@
 
     const inner = document.createElement('div');
     inner.style.cssText = `
-      width: 100%; position: relative; min-height: 100vh;
+      width: 100%; max-width: 100%; position: relative; min-height: 100vh;
+      padding: 0 16px; box-sizing: border-box;
     `;
+
+    // Gespeicherte Canvas-Breite als Basis für Prozent-Berechnung
+    const baseWidth = layout.canvasWidth || 1200;
 
     // Variablen für Video-Player Position
     let videoWrapper = null;
 
-    // Items platzieren
+    // Items platzieren — Positionen/Breiten als Prozent der Canvas-Breite
     for (const item of layout.items) {
       const comp = scanResult.components.find(c => c.type === item.type);
       if (!comp && item.type !== 'custom-text') continue;
 
+      const leftPct = (item.x / baseWidth * 100).toFixed(2);
+      const widthPct = Math.min(100, (item.w / baseWidth * 100)).toFixed(2);
+
       const wrapper = document.createElement('div');
       wrapper.style.cssText = `
-        position: absolute; left: ${item.x}px; top: ${item.y}px;
-        width: ${item.w}px; overflow: hidden;
+        position: absolute; left: ${leftPct}%; top: ${item.y}px;
+        width: ${widthPct}%; overflow: hidden;
+        max-width: 100%;
       `;
 
       let mockup;
       switch (item.type) {
         case 'video-player':
           mockup = renderer.renderVideoPlayer(comp.data, item.w, item.h);
+          // Responsive: Aspect-Ratio statt feste Höhe
+          mockup.style.width = '100%';
+          mockup.style.height = 'auto';
+          mockup.style.aspectRatio = `${item.w} / ${item.h}`;
           // Nur der Player mit useRealPlayer bekommt den echten YouTube-Player
           if (!item.options || item.options.useRealPlayer !== false) {
             if (!videoWrapper) videoWrapper = wrapper; // Erster oder markierter
@@ -406,18 +418,14 @@
       document.head.appendChild(playerStyle);
       moviePlayer.classList.add('pt-repositioned');
 
-      // Video-Item Daten aus dem Layout
-      const videoItem = layout.items.find(i => i.type === 'video-player');
-      const savedW = videoItem ? videoItem.w : 640;
-      const savedH = videoItem ? videoItem.h : 360;
-
       const updatePlayerPos = () => {
-        // Position direkt aus dem Wrapper berechnen (exakte Koordinaten)
-        const wrapperRect = videoWrapper.getBoundingClientRect();
-        moviePlayer.style.left = wrapperRect.left + 'px';
-        moviePlayer.style.top = wrapperRect.top + 'px';
-        moviePlayer.style.width = savedW + 'px';
-        moviePlayer.style.height = savedH + 'px';
+        // Responsive: Größe vom Mockup-Element übernehmen (skaliert mit Fenster)
+        const target = mockupEl || videoWrapper;
+        const rect = target.getBoundingClientRect();
+        moviePlayer.style.left = rect.left + 'px';
+        moviePlayer.style.top = rect.top + 'px';
+        moviePlayer.style.width = rect.width + 'px';
+        moviePlayer.style.height = rect.height + 'px';
       };
 
       // Initial positionieren + kurz warten bis DOM stabil
