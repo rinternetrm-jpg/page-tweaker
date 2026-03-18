@@ -164,39 +164,59 @@
 
     const inner = document.createElement('div');
     inner.style.cssText = `
-      width: 100%; max-width: 100%; position: relative; min-height: 100vh;
-      padding: 0 16px; box-sizing: border-box;
+      width: 100%; max-width: 100%; min-height: 100vh;
+      padding: 0; box-sizing: border-box;
     `;
 
-    // Gespeicherte Canvas-Breite als Basis für Prozent-Berechnung
     const baseWidth = layout.canvasWidth || 1200;
 
     // Variablen für Video-Player Position
     let videoWrapper = null;
 
-    // Items platzieren — Positionen/Breiten als Prozent der Canvas-Breite
-    for (const item of layout.items) {
-      const comp = scanResult.components.find(c => c.type === item.type);
-      if (!comp && item.type !== 'custom-text') continue;
+    // === Flow-Layout: Items nach Y sortieren und in Zeilen gruppieren ===
+    const sortedItems = [...layout.items].sort((a, b) => a.y - b.y);
 
-      const leftPct = (item.x / baseWidth * 100).toFixed(2);
-      const widthPct = Math.min(100, (item.w / baseWidth * 100)).toFixed(2);
+    // Zeilen erkennen: Items mit ähnlichem Y (±30px) gehören in eine Zeile
+    const rows = [];
+    let currentRow = null;
+    for (const item of sortedItems) {
+      if (!currentRow || Math.abs(item.y - currentRow.y) > 30) {
+        currentRow = { y: item.y, items: [] };
+        rows.push(currentRow);
+      }
+      currentRow.items.push(item);
+    }
 
-      const wrapper = document.createElement('div');
-      wrapper.style.cssText = `
-        position: absolute; left: ${leftPct}%; top: ${item.y}px;
-        width: ${widthPct}%; overflow: hidden;
-        max-width: 100%;
+    // Zeilen rendern
+    for (const row of rows) {
+      // Zeile = Flex-Container
+      const rowDiv = document.createElement('div');
+      rowDiv.style.cssText = `
+        display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 16px;
+        align-items: flex-start;
       `;
+
+      for (const item of row.items.sort((a, b) => a.x - b.x)) {
+        const comp = scanResult.components.find(c => c.type === item.type);
+        if (!comp && item.type !== 'custom-text') continue;
+
+        const widthPct = Math.min(100, (item.w / baseWidth * 100)).toFixed(2);
+
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = `
+          width: ${widthPct}%; min-width: 200px; overflow: hidden;
+          flex-shrink: 1; flex-grow: 0; box-sizing: border-box;
+        `;
 
       let mockup;
       switch (item.type) {
         case 'video-player':
           mockup = renderer.renderVideoPlayer(comp.data, item.w, item.h);
-          // Responsive: Aspect-Ratio statt feste Höhe
+          // Responsive: 100% Breite, 16:9 Aspect Ratio
           mockup.style.width = '100%';
-          mockup.style.height = 'auto';
-          mockup.style.aspectRatio = `${item.w} / ${item.h}`;
+          mockup.style.height = '0';
+          mockup.style.paddingBottom = '56.25%'; // 16:9
+          mockup.style.position = 'relative';
           // Nur der Player mit useRealPlayer bekommt den echten YouTube-Player
           if (!item.options || item.options.useRealPlayer !== false) {
             if (!videoWrapper) videoWrapper = wrapper; // Erster oder markierter
@@ -244,8 +264,11 @@
           continue;
       }
 
-      wrapper.appendChild(mockup);
-      inner.appendChild(wrapper);
+        wrapper.appendChild(mockup);
+        rowDiv.appendChild(wrapper);
+      }
+
+      inner.appendChild(rowDiv);
     }
 
     canvas.appendChild(inner);
