@@ -23,16 +23,16 @@
   let nextId = 1;
 
   // === Original-Seite verstecken (nicht zerstören!) ===
-  const origApp = document.querySelector('ytd-app') || document.querySelector('body > *:not(.pt-builder-root)');
-  if (origApp) {
-    origApp.style.cssText = 'visibility:hidden !important; pointer-events:none !important;';
-    origApp.dataset.ptOriginal = 'true';
-  }
-
-  // Echte YouTube-Masthead per CSS sichtbar machen (NICHT verschieben!)
+  // Alles in ytd-app AUSSER Masthead verstecken
   const mastheadStyle = document.createElement('style');
   mastheadStyle.id = 'pt-masthead-style';
   mastheadStyle.textContent = `
+    ytd-app > *:not(ytd-masthead),
+    ytd-app > #content,
+    ytd-app > tp-yt-app-drawer {
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
     ytd-masthead {
       position: fixed !important;
       top: 0 !important;
@@ -41,6 +41,9 @@
       z-index: 1000001 !important;
       visibility: visible !important;
       pointer-events: auto !important;
+    }
+    ytd-masthead * {
+      visibility: visible !important;
     }
   `;
   document.head.appendChild(mastheadStyle);

@@ -140,12 +140,7 @@
       renderer.setTheme('dark');
     }
 
-    // === Original-Seite VERSTECKEN, nicht zerstören ===
-    const origApp = document.querySelector('ytd-app');
-    if (origApp) {
-      origApp.style.cssText = 'visibility:hidden !important; pointer-events:none !important;';
-      origApp.dataset.ptOriginal = 'true';
-    }
+    // === Original-Seite VERSTECKEN (außer Masthead), nicht zerstören ===
 
     // Echten YouTube-Player merken
     const playerContainer = document.querySelector('#player-container-inner') ||
@@ -437,10 +432,16 @@
     };
 
     // === Echte YouTube-Masthead IMMER oben fixieren ===
-    // Echte YouTube-Masthead per CSS sichtbar machen (bleibt in ytd-app)
+    // Alles in ytd-app AUSSER Masthead verstecken + Masthead fixieren
     const mastheadStyle = document.createElement('style');
     mastheadStyle.id = 'pt-masthead-style';
     mastheadStyle.textContent = `
+      ytd-app > *:not(ytd-masthead),
+      ytd-app > #content,
+      ytd-app > tp-yt-app-drawer {
+        visibility: hidden !important;
+        pointer-events: none !important;
+      }
       ytd-masthead {
         position: fixed !important;
         top: 0 !important;
@@ -449,6 +450,9 @@
         z-index: 100001 !important;
         visibility: visible !important;
         pointer-events: auto !important;
+      }
+      ytd-masthead * {
+        visibility: visible !important;
       }
     `;
     document.head.appendChild(mastheadStyle);
