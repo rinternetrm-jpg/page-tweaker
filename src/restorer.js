@@ -9,11 +9,18 @@
 
   // === YouTube wieder sichtbar machen (early-hide.css überschreiben) ===
   function showYouTube() {
-    const app = document.querySelector('ytd-app');
-    if (app) app.style.setProperty('visibility', 'visible', 'important');
-    // Flash-hide Style entfernen falls vorhanden
-    const hideFlash = document.getElementById('pt-hide-flash');
-    if (hideFlash) hideFlash.remove();
+    // early-hide.css Regeln aufheben
+    const unhide = document.createElement('style');
+    unhide.id = 'pt-unhide';
+    unhide.textContent = `
+      ytd-app #content, ytd-app tp-yt-app-drawer, ytd-app #guide {
+        visibility: visible !important;
+        pointer-events: auto !important;
+        height: auto !important;
+        overflow: visible !important;
+      }
+    `;
+    document.head.appendChild(unhide);
   }
 
   // === Hauptfunktion ===
@@ -438,30 +445,13 @@
     const mastheadStyle = document.createElement('style');
     mastheadStyle.id = 'pt-masthead-style';
     mastheadStyle.textContent = `
-      ytd-app #content, ytd-app tp-yt-app-drawer {
-        visibility: hidden !important; pointer-events: none !important;
-        height: 0 !important; overflow: hidden !important;
-      }
-      ytd-app, ytd-app > *, #masthead-container, #masthead-container > * {
-        visibility: visible !important;
-      }
-      ytd-masthead, ytd-masthead *, ytd-masthead #container, ytd-masthead #background {
-        visibility: visible !important;
-        pointer-events: auto !important;
-      }
       ytd-masthead {
         position: fixed !important;
         top: 0 !important;
         left: 0 !important;
         width: 100% !important;
         z-index: 100001 !important;
-        background-color: ${mhBgR} !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;
-      }
-      ytd-masthead #container,
-      ytd-masthead #background,
-      ytd-masthead > div {
-        background-color: ${mhBgR} !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
       }
     `;
     document.head.appendChild(mastheadStyle);
