@@ -39,14 +39,19 @@
       el.style.setProperty('pointer-events', 'auto', 'important');
       el = el.parentElement;
     }
-    // Masthead fixieren + Hintergrund setzen
+    // Masthead fixieren + sichtbar machen
     const isDark = document.documentElement.hasAttribute('dark');
+    const mhBg = isDark ? '#0f0f0f' : '#ffffff';
     realMasthead.style.setProperty('position', 'fixed', 'important');
     realMasthead.style.setProperty('top', '0', 'important');
     realMasthead.style.setProperty('left', '0', 'important');
     realMasthead.style.setProperty('width', '100%', 'important');
     realMasthead.style.setProperty('z-index', '1000001', 'important');
-    realMasthead.style.setProperty('background-color', isDark ? '#0f0f0f' : '#ffffff', 'important');
+    realMasthead.style.setProperty('box-shadow', '0 1px 3px rgba(0,0,0,0.3)', 'important');
+    // Hintergrund auf alle inneren Container setzen
+    realMasthead.style.setProperty('background', mhBg, 'important');
+    const mhInner = realMasthead.querySelector('#container, #masthead-container, div');
+    if (mhInner) mhInner.style.setProperty('background', mhBg, 'important');
     // Alle Kinder der Masthead auch sichtbar
     realMasthead.querySelectorAll('*').forEach(child => {
       child.style.setProperty('visibility', 'visible', 'important');

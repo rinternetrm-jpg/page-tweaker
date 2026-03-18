@@ -446,12 +446,16 @@
         el = el.parentElement;
       }
       const isDark = document.documentElement.hasAttribute('dark');
+      const mhBg = isDark ? '#0f0f0f' : '#ffffff';
       realMasthead.style.setProperty('position', 'fixed', 'important');
       realMasthead.style.setProperty('top', '0', 'important');
       realMasthead.style.setProperty('left', '0', 'important');
       realMasthead.style.setProperty('width', '100%', 'important');
       realMasthead.style.setProperty('z-index', '100001', 'important');
-      realMasthead.style.setProperty('background-color', isDark ? '#0f0f0f' : '#ffffff', 'important');
+      realMasthead.style.setProperty('box-shadow', '0 1px 3px rgba(0,0,0,0.3)', 'important');
+      realMasthead.style.setProperty('background', mhBg, 'important');
+      const mhInner = realMasthead.querySelector('#container, #masthead-container, div');
+      if (mhInner) mhInner.style.setProperty('background', mhBg, 'important');
       realMasthead.querySelectorAll('*').forEach(child => {
         child.style.setProperty('visibility', 'visible', 'important');
       });
