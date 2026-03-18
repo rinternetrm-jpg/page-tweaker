@@ -246,11 +246,13 @@
         case 'playlist':
           mockup = renderer.renderPlaylist(comp.data);
           break;
-        case 'masthead':
-          mockup = renderer.renderMasthead(comp.data);
-          // Masthead-Buttons funktional machen
-          addMastheadActions(mockup);
+        case 'masthead': {
+          // Platzhalter für die Position
+          mockup = document.createElement('div');
+          mockup.className = 'pt-mockup pt-mockup-masthead-placeholder';
+          mockup.style.cssText = 'width:100%;height:56px;';
           break;
+        }
         case 'custom-text': {
           // Custom-Text braucht keine Scanner-Daten
           const tb = document.createElement('div');
@@ -433,6 +435,23 @@
         updateRecommendationBlocks({ items: resp.items });
       });
     };
+
+    // === Echte YouTube-Masthead über den Platzhalter legen ===
+    const mastheadPlaceholder = canvas.querySelector('.pt-mockup-masthead-placeholder');
+    const realMasthead = document.querySelector('ytd-masthead');
+    if (mastheadPlaceholder && realMasthead) {
+      document.body.appendChild(realMasthead);
+      realMasthead.style.cssText = `
+        position: fixed !important;
+        top: 0 !important; left: 0 !important;
+        width: 100% !important;
+        z-index: 100001 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+      `;
+      // Canvas etwas Padding oben geben damit Inhalt nicht unter der Masthead verschwindet
+      inner.style.paddingTop = '56px';
+    }
 
     // === Echten YouTube-Player über die Video-Position legen ===
     if (videoWrapper && moviePlayer) {
