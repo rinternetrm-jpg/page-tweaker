@@ -140,7 +140,11 @@
       renderer.setTheme('dark');
     }
 
-    // === Original-Seite VERSTECKEN (außer Masthead), nicht zerstören ===
+    // === Original-Seite VERSTECKEN (außer Masthead) ===
+    const origApp = document.querySelector('ytd-app');
+    if (origApp) {
+      origApp.style.cssText = 'visibility:hidden !important; pointer-events:none !important;';
+    }
 
     // Echten YouTube-Player merken
     const playerContainer = document.querySelector('#player-container-inner') ||
@@ -432,28 +436,31 @@
     };
 
     // === Echte YouTube-Masthead IMMER oben fixieren ===
-    // Alles in ytd-app AUSSER Masthead verstecken + Masthead fixieren
+    // Masthead + alle Eltern bis ytd-app sichtbar machen
+    const realMasthead = document.querySelector('ytd-masthead');
+    if (realMasthead) {
+      let el = realMasthead;
+      while (el && el.tagName !== 'BODY') {
+        el.style.setProperty('visibility', 'visible', 'important');
+        el.style.setProperty('pointer-events', 'auto', 'important');
+        el = el.parentElement;
+      }
+      realMasthead.style.setProperty('position', 'fixed', 'important');
+      realMasthead.style.setProperty('top', '0', 'important');
+      realMasthead.style.setProperty('left', '0', 'important');
+      realMasthead.style.setProperty('width', '100%', 'important');
+      realMasthead.style.setProperty('z-index', '100001', 'important');
+      realMasthead.querySelectorAll('*').forEach(child => {
+        child.style.setProperty('visibility', 'visible', 'important');
+      });
+    }
+
+    // Nicht-Masthead Inhalte verstecken
     const mastheadStyle = document.createElement('style');
     mastheadStyle.id = 'pt-masthead-style';
     mastheadStyle.textContent = `
-      ytd-app > *:not(ytd-masthead),
-      ytd-app > #content,
-      ytd-app > tp-yt-app-drawer {
-        visibility: hidden !important;
-        pointer-events: none !important;
-      }
-      ytd-masthead {
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        width: 100% !important;
-        z-index: 100001 !important;
-        visibility: visible !important;
-        pointer-events: auto !important;
-      }
-      ytd-masthead * {
-        visibility: visible !important;
-      }
+      ytd-app #content { visibility: hidden !important; pointer-events: none !important; height: 0 !important; overflow: hidden !important; }
+      ytd-app tp-yt-app-drawer { visibility: hidden !important; pointer-events: none !important; }
     `;
     document.head.appendChild(mastheadStyle);
     inner.style.paddingTop = '56px';
