@@ -262,9 +262,14 @@
           return;
         }
 
+        console.log('[PageTweaker] fetchVideoData:', resp.recommendations?.length, 'recs,',
+          'meta:', !!resp.metadata, 'channel:', !!resp.channel);
+
         // Empfehlungen aktualisieren
-        if (resp.recommendations.length > 0) {
+        if (resp.recommendations && resp.recommendations.length > 0) {
           updateRecommendationBlocks({ items: resp.recommendations });
+        } else {
+          console.warn('[PageTweaker] Keine Empfehlungen vom Fetch erhalten');
         }
 
         // Metadaten aktualisieren

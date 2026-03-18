@@ -25,12 +25,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         const data = JSON.parse(match[1]);
         const result = { ok: true, recommendations: [], comments: [], metadata: null, channel: null, description: null };
 
-        // Empfehlungen extrahieren
-        function findRecommendations(obj) {
-          if (!obj || typeof obj !== 'object') return;
+        // Empfehlungen extrahieren — mehrere YouTube-Strukturen unterstützen
+        function findRecommendations(obj, depth) {
+          if (!obj || typeof obj !== 'object' || depth > 12) return;
+          if (result.recommendations.length >= 30) return;
+
+          // Alte Struktur: compactVideoRenderer
           if (obj.compactVideoRenderer) {
             const vr = obj.compactVideoRenderer;
-            result.recommendations.push({
+            if (vr.videoId) result.recommendations.push({
               videoId: vr.videoId,
               title: vr.title?.simpleText || vr.title?.runs?.[0]?.text || 'Video',
               channelName: vr.longBylineText?.runs?.[0]?.text || vr.shortBylineText?.runs?.[0]?.text || '',
@@ -40,10 +43,39 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
               timeAgo: vr.publishedTimeText?.simpleText || ''
             });
           }
-          // Neue YouTube-Struktur
+
+          // Neue Struktur: lockupViewModel (2025/2026)
+          if (obj.lockupViewModel) {
+            const lv = obj.lockupViewModel;
+            // VideoId aus contentId oder aus onTap URL extrahieren
+            let videoId = lv.contentId || '';
+            if (!videoId) {
+              const href = lv.rendererContext?.commandContext?.onTap?.innertubeCommand?.watchEndpoint?.videoId;
+              if (href) videoId = href;
+            }
+            const meta = lv.metadata?.lockupMetadataViewModel;
+            const title = meta?.title?.content || '';
+            const metaLines = meta?.metadata?.contentMetadataViewModel?.metadataRows || [];
+            let channelName = '';
+            let viewCount = '';
+            for (const row of metaLines) {
+              for (const part of (row.metadataParts || [])) {
+                const txt = part.text?.content || '';
+                if (!channelName && txt && !txt.includes('Aufrufe') && !txt.includes('views')) channelName = txt;
+                if (txt.includes('Aufrufe') || txt.includes('views')) viewCount = txt;
+              }
+            }
+            const thumbnailUrl = videoId ? `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg` : '';
+
+            if (videoId) result.recommendations.push({
+              videoId, title, channelName, viewCount, duration: '', thumbnailUrl, timeAgo: ''
+            });
+          }
+
+          // Suche: videoRenderer
           if (obj.videoRenderer) {
             const vr = obj.videoRenderer;
-            result.recommendations.push({
+            if (vr.videoId) result.recommendations.push({
               videoId: vr.videoId,
               title: vr.title?.runs?.[0]?.text || 'Video',
               channelName: vr.longBylineText?.runs?.[0]?.text || '',
@@ -53,8 +85,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
               timeAgo: vr.publishedTimeText?.simpleText || ''
             });
           }
-          if (Array.isArray(obj)) obj.forEach(findRecommendations);
-          else Object.values(obj).forEach(findRecommendations);
+
+          if (Array.isArray(obj)) obj.forEach(v => findRecommendations(v, depth + 1));
+          else Object.values(obj).forEach(v => findRecommendations(v, depth + 1));
         }
 
         // Metadaten extrahieren
@@ -86,7 +119,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           else Object.values(obj).forEach(findMetadata);
         }
 
-        findRecommendations(data);
+        findRecommendations(data, 0);
         findMetadata(data);
 
         console.log('[PT Background] fetchVideoData:', result.recommendations.length, 'recs');
@@ -168,35 +201,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       target: { tabId },
       world: 'MAIN',
       func: (videoId) => {
-        console.log('[PageTweaker] Triggere YouTube-Navigation zu:', videoId);
-
-        // Methode 1: YouTube's interne Navigation
-        const url = '/watch?v=' + videoId;
-        try {
-          // ytd-app hat eine navigate-Methode
-          const app = document.querySelector('ytd-app');
-          if (app && typeof app.navigate === 'function') {
-            app.navigate(url);
-            console.log('[PageTweaker] app.navigate() erfolgreich');
-            return;
-          }
-        } catch(e) {}
-
-        try {
-          // yt-navigate Custom Event
-          document.dispatchEvent(new CustomEvent('yt-navigate', {
-            detail: { endpoint: { watchEndpoint: { videoId } } }
-          }));
-          console.log('[PageTweaker] yt-navigate Event dispatched');
-        } catch(e) {}
-
-        // Methode 2: Fallback - loadVideoById für sofortige Wiedergabe
-        try {
-          const player = document.querySelector('#movie_player');
-          if (player && typeof player.loadVideoById === 'function') {
-            player.loadVideoById(videoId);
-          }
-        } catch(e) {}
+        // loadVideoById ist die zuverlässigste Methode
+        const player = document.querySelector('#movie_player');
+        if (player && typeof player.loadVideoById === 'function') {
+          player.loadVideoById(videoId);
+          console.log('[PageTweaker] loadVideoById erfolgreich:', videoId);
+        } else {
+          console.warn('[PageTweaker] Player API nicht verfügbar, player:', !!player,
+            'methods:', player ? Object.getOwnPropertyNames(Object.getPrototypeOf(player)).filter(m => m.includes('load')).join(',') : 'n/a');
+        }
       },
       args: [msg.videoId]
     }).catch(e => console.error('[PT Background] loadVideo error:', e));
