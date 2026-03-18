@@ -15,7 +15,7 @@
   window.__ptBuilderActive = true;
 
   // === State ===
-  let canvasWidth = 1200;
+  let canvasWidth = window.innerWidth - 300; // Viewport minus Palette-Breite
   let canvasBg = '#ffffff';
   let theme = 'light';
   let placedItems = [];
@@ -39,6 +39,25 @@
       visibility: visible !important; pointer-events: auto !important;
     `;
   }
+
+  // YouTube Sidebar (Hamburger-Menü) auch sichtbar + funktional machen
+  const guideSidebar = document.querySelector('ytd-guide-renderer, ytd-mini-guide-renderer, #guide');
+  if (guideSidebar) {
+    document.body.appendChild(guideSidebar);
+    guideSidebar.style.cssText = `
+      position: fixed !important; top: 56px !important; left: 0 !important;
+      z-index: 1000000 !important; visibility: visible !important;
+      pointer-events: auto !important; height: calc(100vh - 56px) !important;
+    `;
+  }
+  // Overlay für Sidebar (wenn Guide geöffnet wird)
+  const guideOverlay = document.createElement('style');
+  guideOverlay.textContent = `
+    tp-yt-app-drawer { visibility: visible !important; z-index: 999999 !important; pointer-events: auto !important; }
+    tp-yt-app-drawer[opened] .drawer-container { visibility: visible !important; }
+    tp-yt-app-drawer .drawer-container { position: fixed !important; top: 56px !important; left: 0 !important; z-index: 999999 !important; }
+  `;
+  document.head.appendChild(guideOverlay);
 
   const originalPlayer = document.querySelector('#movie_player');
 
@@ -205,10 +224,10 @@
           <select id="ptCanvasWidth">
             <option value="375">375px (Mobile)</option>
             <option value="768">768px (Tablet)</option>
-            <option value="1200" selected>1200px</option>
+            <option value="1200">1200px</option>
             <option value="1400">1400px</option>
             <option value="1920">1920px (Full HD)</option>
-            <option value="full">Vollbild</option>
+            <option value="full" selected>Vollbild</option>
           </select>
         </div>
         <div class="pt-config-row">

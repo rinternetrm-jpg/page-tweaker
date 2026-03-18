@@ -448,9 +448,26 @@
         visibility: visible !important;
         pointer-events: auto !important;
       `;
-      // Canvas Padding oben damit Inhalt nicht unter der Masthead verschwindet
       inner.style.paddingTop = '56px';
     }
+
+    // YouTube Sidebar (Hamburger-Menü) funktional machen
+    const sidebarStyle = document.createElement('style');
+    sidebarStyle.id = 'pt-sidebar-style';
+    sidebarStyle.textContent = `
+      tp-yt-app-drawer { visibility: visible !important; z-index: 100002 !important; pointer-events: auto !important; }
+      tp-yt-app-drawer[opened] { visibility: visible !important; }
+      tp-yt-app-drawer .drawer-container {
+        position: fixed !important; top: 56px !important; left: 0 !important;
+        z-index: 100002 !important; visibility: visible !important;
+        height: calc(100vh - 56px) !important; pointer-events: auto !important;
+      }
+      tp-yt-app-drawer[opened] ~ #content { pointer-events: auto !important; }
+      ytd-guide-renderer, ytd-mini-guide-renderer {
+        visibility: visible !important; pointer-events: auto !important;
+      }
+    `;
+    document.head.appendChild(sidebarStyle);
 
     // === Echten YouTube-Player über die Video-Position legen ===
     if (videoWrapper && moviePlayer) {
