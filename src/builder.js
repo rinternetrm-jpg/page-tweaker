@@ -29,43 +29,21 @@
     origApp.dataset.ptOriginal = 'true';
   }
 
-  // Echte YouTube-Masthead oben fixieren (immer sichtbar, nicht editierbar)
-  const realMasthead = document.querySelector('ytd-masthead');
-  if (realMasthead) {
-    // YouTube Dark/Light Mode Farbe ermitteln
-    const isDark = document.documentElement.hasAttribute('dark') ||
-                   document.querySelector('html[dark]') !== null;
-    const mastheadBg = isDark ? '#0f0f0f' : '#ffffff';
-
-    document.body.appendChild(realMasthead);
-    realMasthead.style.setProperty('position', 'fixed', 'important');
-    realMasthead.style.setProperty('top', '0', 'important');
-    realMasthead.style.setProperty('left', '0', 'important');
-    realMasthead.style.setProperty('width', '100%', 'important');
-    realMasthead.style.setProperty('z-index', '1000001', 'important');
-    realMasthead.style.setProperty('visibility', 'visible', 'important');
-    realMasthead.style.setProperty('pointer-events', 'auto', 'important');
-    realMasthead.style.setProperty('background', mastheadBg, 'important');
-  }
-
-  // YouTube Sidebar (Hamburger-Menü) auch sichtbar + funktional machen
-  const guideSidebar = document.querySelector('ytd-guide-renderer, ytd-mini-guide-renderer, #guide');
-  if (guideSidebar) {
-    document.body.appendChild(guideSidebar);
-    guideSidebar.style.cssText = `
-      position: fixed !important; top: 56px !important; left: 0 !important;
-      z-index: 1000000 !important; visibility: visible !important;
-      pointer-events: auto !important; height: calc(100vh - 56px) !important;
-    `;
-  }
-  // Overlay für Sidebar (wenn Guide geöffnet wird)
-  const guideOverlay = document.createElement('style');
-  guideOverlay.textContent = `
-    tp-yt-app-drawer { visibility: visible !important; z-index: 999999 !important; pointer-events: auto !important; }
-    tp-yt-app-drawer[opened] .drawer-container { visibility: visible !important; }
-    tp-yt-app-drawer .drawer-container { position: fixed !important; top: 56px !important; left: 0 !important; z-index: 999999 !important; }
+  // Echte YouTube-Masthead per CSS sichtbar machen (NICHT verschieben!)
+  const mastheadStyle = document.createElement('style');
+  mastheadStyle.id = 'pt-masthead-style';
+  mastheadStyle.textContent = `
+    ytd-masthead {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      z-index: 1000001 !important;
+      visibility: visible !important;
+      pointer-events: auto !important;
+    }
   `;
-  document.head.appendChild(guideOverlay);
+  document.head.appendChild(mastheadStyle);
 
   const originalPlayer = document.querySelector('#movie_player');
 
@@ -925,9 +903,8 @@
   function exitBuilder() {
     window.__ptBuilderActive = false;
     if (originalPlayer) originalPlayer.style.cssText = '';
-    if (realMasthead) {
-      realMasthead.style.cssText = '';
-    }
+    const mhStyle = document.getElementById('pt-masthead-style');
+    if (mhStyle) mhStyle.remove();
     const root = document.querySelector('.pt-builder-root');
     if (root) root.remove();
     const style = document.getElementById('pt-builder-style');

@@ -437,23 +437,22 @@
     };
 
     // === Echte YouTube-Masthead IMMER oben fixieren ===
-    const realMasthead = document.querySelector('ytd-masthead');
-    if (realMasthead) {
-      const isDark = document.documentElement.hasAttribute('dark') ||
-                     document.querySelector('html[dark]') !== null;
-      const mastheadBg = isDark ? '#0f0f0f' : '#ffffff';
-
-      document.body.appendChild(realMasthead);
-      realMasthead.style.setProperty('position', 'fixed', 'important');
-      realMasthead.style.setProperty('top', '0', 'important');
-      realMasthead.style.setProperty('left', '0', 'important');
-      realMasthead.style.setProperty('width', '100%', 'important');
-      realMasthead.style.setProperty('z-index', '100001', 'important');
-      realMasthead.style.setProperty('visibility', 'visible', 'important');
-      realMasthead.style.setProperty('pointer-events', 'auto', 'important');
-      realMasthead.style.setProperty('background', mastheadBg, 'important');
-      inner.style.paddingTop = '56px';
-    }
+    // Echte YouTube-Masthead per CSS sichtbar machen (bleibt in ytd-app)
+    const mastheadStyle = document.createElement('style');
+    mastheadStyle.id = 'pt-masthead-style';
+    mastheadStyle.textContent = `
+      ytd-masthead {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        z-index: 100001 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+      }
+    `;
+    document.head.appendChild(mastheadStyle);
+    inner.style.paddingTop = '56px';
 
     // YouTube Sidebar (Hamburger-Menü) funktional machen
     const sidebarStyle = document.createElement('style');
