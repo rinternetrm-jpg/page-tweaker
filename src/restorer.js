@@ -210,43 +210,112 @@
         `;
 
       let mockup;
+      // Versuche echte YouTube-Elemente zu verwenden (voll funktional)
+      function grabRealElement(selectors) {
+        for (const sel of selectors) {
+          const el = document.querySelector(sel);
+          if (el) {
+            // Element aus ytd-app herausnehmen und in unser Layout verschieben
+            el.style.cssText = 'visibility:visible !important; position:relative !important; display:block !important; pointer-events:auto !important; width:100% !important;';
+            // Alle Eltern bis ytd-app auch sichtbar machen
+            let parent = el.parentElement;
+            while (parent && parent.tagName !== 'YTD-APP' && parent !== document.body) {
+              parent.style.setProperty('visibility', 'visible', 'important');
+              parent.style.setProperty('display', 'block', 'important');
+              parent = parent.parentElement;
+            }
+            return el;
+          }
+        }
+        return null;
+      }
+
       switch (item.type) {
         case 'video-player':
           mockup = renderer.renderVideoPlayer(comp.data, item.w, item.h);
-          // Responsive: 100% Breite, 16:9 Aspect Ratio
           mockup.style.width = '100%';
           mockup.style.height = '0';
-          mockup.style.paddingBottom = '56.25%'; // 16:9
+          mockup.style.paddingBottom = '56.25%';
           mockup.style.position = 'relative';
-          // Nur der Player mit useRealPlayer bekommt den echten YouTube-Player
           if (!item.options || item.options.useRealPlayer !== false) {
-            if (!videoWrapper) videoWrapper = wrapper; // Erster oder markierter
+            if (!videoWrapper) videoWrapper = wrapper;
           }
           if (item.options && item.options.useRealPlayer) {
-            videoWrapper = wrapper; // Explizit markierter hat Vorrang
+            videoWrapper = wrapper;
           }
           break;
-        case 'video-metadata':
-          mockup = renderer.renderMetadata(comp.data);
+        case 'video-metadata': {
+          // Echte Metadaten (Like, Dislike, Teilen, Speichern, Clip etc.)
+          const realMeta = grabRealElement([
+            '#above-the-fold #title',
+            'ytd-watch-metadata #title'
+          ]);
+          const realActions = grabRealElement([
+            '#above-the-fold #actions',
+            'ytd-watch-metadata #actions',
+            '#top-level-buttons-computed'
+          ]);
+          const metaContainer = document.createElement('div');
+          metaContainer.className = 'pt-mockup pt-mockup-metadata';
+          metaContainer.style.cssText = 'width:100%;';
+          if (realMeta) metaContainer.appendChild(realMeta);
+          if (realActions) metaContainer.appendChild(realActions);
+          // Fallback auf Mockup wenn echte Elemente nicht gefunden
+          mockup = (realMeta || realActions) ? metaContainer : renderer.renderMetadata(comp.data);
           break;
-        case 'channel-info':
-          mockup = renderer.renderChannelInfo(comp.data);
+        }
+        case 'channel-info': {
+          // Echte Kanal-Info (Abonnieren-Button funktional!)
+          const realChannel = grabRealElement([
+            'ytd-watch-metadata #owner',
+            'ytd-video-owner-renderer',
+            '#above-the-fold #owner'
+          ]);
+          mockup = realChannel || renderer.renderChannelInfo(comp.data);
           break;
-        case 'description':
-          mockup = renderer.renderDescription(comp.data);
+        }
+        case 'description': {
+          // Echte Beschreibung (ausklappbar)
+          const realDesc = grabRealElement([
+            'ytd-watch-metadata #description-inner',
+            '#description-inline-expander',
+            'ytd-text-inline-expander'
+          ]);
+          mockup = realDesc || renderer.renderDescription(comp.data);
           break;
-        case 'comments':
-          mockup = renderer.renderComments(comp.data, item.options || {});
+        }
+        case 'comments': {
+          // Echte Kommentare (funktional: liken, antworten etc.)
+          const realComments = grabRealElement([
+            'ytd-comments#comments',
+            '#comments'
+          ]);
+          if (realComments) {
+            realComments.style.maxHeight = item.h + 'px';
+            realComments.style.overflowY = 'auto';
+          }
+          mockup = realComments || renderer.renderComments(comp.data, item.options || {});
           break;
+        }
         case 'recommendations':
           mockup = renderer.renderRecommendations(comp.data, item.options || {});
           break;
         case 'playlist':
           mockup = renderer.renderPlaylist(comp.data);
           break;
-        case 'masthead':
-          mockup = renderer.renderMasthead(comp.data);
+        case 'masthead': {
+          // Echte YouTube-Masthead (Profil, Glocke, Erstellen — alles funktional)
+          const realMasthead = grabRealElement([
+            'ytd-masthead#masthead',
+            '#masthead-container',
+            'ytd-masthead'
+          ]);
+          if (realMasthead) {
+            realMasthead.style.cssText = 'visibility:visible !important; position:relative !important; display:flex !important; pointer-events:auto !important; width:100% !important; z-index:1 !important;';
+          }
+          mockup = realMasthead || renderer.renderMasthead(comp.data);
           break;
+        }
         case 'custom-text': {
           // Custom-Text braucht keine Scanner-Daten
           const tb = document.createElement('div');
