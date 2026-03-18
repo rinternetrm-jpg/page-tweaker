@@ -318,23 +318,46 @@
         border-radius: 8px;
       `;
 
+      // YouTube Logo SVG (originalgetreu)
+      const logoSvg = `<svg viewBox="0 0 90 20" style="width:90px;height:20px;flex-shrink:0;">
+        <g>
+          <path d="M27.97 3.12c-.27-1.03-1.07-1.84-2.1-2.11C23.73.46 14.6.46 14.6.46S5.47.46 3.33 1.01c-1.03.27-1.83 1.08-2.1 2.11C.68 5.26.68 9.68.68 9.68s0 4.42.55 6.56c.27 1.03 1.07 1.84 2.1 2.11 2.14.55 11.27.55 11.27.55s9.13 0 11.27-.55c1.03-.27 1.83-1.08 2.1-2.11.55-2.14.55-6.56.55-6.56s0-4.42-.55-6.56z" fill="#FF0000"/>
+          <path d="M11.76 13.86l7.5-4.18-7.5-4.19v8.37z" fill="#fff"/>
+          <text x="32" y="14.5" fill="${this.c.textPrimary}" font-family="system-ui" font-size="14" font-weight="700" letter-spacing="-0.5">YouTube</text>
+        </g>
+      </svg>`;
+
       el.innerHTML = `
-        <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
-          <div style="width:32px;height:22px;background:#f00;border-radius:6px;display:flex;align-items:center;justify-content:center;">
-            <div style="width:0;height:0;border-left:10px solid #fff;border-top:6px solid transparent;border-bottom:6px solid transparent;margin-left:2px;"></div>
-          </div>
-          <span style="font-size:18px;font-weight:700;color:${this.c.textPrimary};letter-spacing:-1px;">YouTube</span>
-        </div>
-        <div style="flex:1;max-width:600px;position:relative;">
-          <input type="text" placeholder="${this._esc(data.searchText || 'Suchen')}" disabled
-            style="width:100%;padding:8px 12px;border:1px solid ${this.c.border};border-radius:20px;
+        <a href="https://www.youtube.com" style="text-decoration:none;display:flex;align-items:center;">
+          ${logoSvg}
+        </a>
+        <form class="pt-search-form" style="flex:1;max-width:600px;display:flex;">
+          <input type="text" placeholder="${this._esc(data.searchText || 'Suchen')}"
+            class="pt-search-input"
+            style="flex:1;padding:8px 16px;border:1px solid ${this.c.border};border-radius:20px 0 0 20px;
                    background:${this.c.bg};color:${this.c.textPrimary};font-size:14px;outline:none;">
-        </div>
+          <button type="submit" style="padding:0 16px;border:1px solid ${this.c.border};border-left:none;
+                  border-radius:0 20px 20px 0;background:${this.c.chipBg};cursor:pointer;font-size:16px;">
+            🔍
+          </button>
+        </form>
         <div style="margin-left:auto;display:flex;gap:12px;align-items:center;">
-          <div style="width:36px;height:36px;border-radius:50%;background:${this.c.chipBg};display:flex;align-items:center;justify-content:center;font-size:16px;">🔔</div>
+          <div style="width:36px;height:36px;border-radius:50%;background:${this.c.chipBg};
+                      display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;">🔔</div>
           <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);"></div>
         </div>
       `;
+
+      // Suche funktional machen
+      const form = el.querySelector('.pt-search-form');
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const query = el.querySelector('.pt-search-input').value.trim();
+        if (query) {
+          window.location.href = 'https://www.youtube.com/results?search_query=' + encodeURIComponent(query);
+        }
+      });
+
       return el;
     }
 

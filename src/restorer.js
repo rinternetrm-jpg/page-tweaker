@@ -7,17 +7,6 @@
   let lastUrl = location.href;
   let isRestored = false;
 
-  // === Sofort Seite verstecken wenn auto_apply aktiv (verhindert Flash) ===
-  (async () => {
-    const autoCheck = await chrome.storage.local.get('pt_auto_apply');
-    if (autoCheck.pt_auto_apply) {
-      const hideStyle = document.createElement('style');
-      hideStyle.id = 'pt-hide-flash';
-      hideStyle.textContent = 'ytd-app { visibility: hidden !important; }';
-      (document.head || document.documentElement).appendChild(hideStyle);
-    }
-  })();
-
   // === Hauptfunktion ===
   async function checkAndApplyLayout() {
     const domain = location.hostname;

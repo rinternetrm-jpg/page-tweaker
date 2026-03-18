@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "PageTweaker",
-  "version": "3.1.0",
+  "version": "3.4.0",
   "description": "Verwandelt jede Webseite in einen visuellen Page Builder mit Drag & Drop",
   "permissions": ["storage", "activeTab", "scripting"],
   "host_permissions": ["<all_urls>"],
@@ -22,6 +22,11 @@
     "128": "icons/icon128.png"
   },
   "content_scripts": [
+    {
+      "matches": ["*://*.youtube.com/*"],
+      "js": ["src/early-hide.js"],
+      "run_at": "document_start"
+    },
     {
       "matches": ["<all_urls>"],
       "js": ["src/restorer.js"],
