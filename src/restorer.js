@@ -254,8 +254,7 @@
     });
 
     // === Suche: Ergebnisse in Empfehlungs-Blöcke laden ===
-    document.addEventListener('pt-search', async (e) => {
-      const query = e.detail?.query;
+    window.__ptSearchHandler = (query) => {
       if (!query) return;
 
       console.log('[PageTweaker] Suche:', query);
@@ -301,7 +300,7 @@
           });
         });
       });
-    });
+    };
 
     // === Echten YouTube-Player über die Video-Position legen ===
     if (videoWrapper && moviePlayer) {

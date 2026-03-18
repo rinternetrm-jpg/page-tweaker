@@ -348,14 +348,13 @@
         </div>
       `;
 
-      // Suche funktional — Ergebnisse bleiben im PageTweaker Layout
+      // Suche funktional — globale Callback-Funktion
       const form = el.querySelector('.pt-search-form');
       form.addEventListener('submit', (e) => {
         e.preventDefault();
         const query = el.querySelector('.pt-search-input').value.trim();
-        if (query) {
-          // Custom Event das der Restorer abfängt
-          document.dispatchEvent(new CustomEvent('pt-search', { detail: { query } }));
+        if (query && typeof window.__ptSearchHandler === 'function') {
+          window.__ptSearchHandler(query);
         }
       });
 

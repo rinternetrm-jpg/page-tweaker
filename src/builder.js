@@ -404,6 +404,14 @@
       const hasReal = placedItems.some(i => i.type === 'video-player' && i.options.useRealPlayer);
       o.useRealPlayer = !hasReal;
     }
+    if (type === 'recommendations') {
+      // Automatischer Offset basierend auf bestehenden Empfehlungs-Blöcken
+      const existingRecs = placedItems.filter(i => i.type === 'recommendations');
+      if (existingRecs.length > 0) {
+        const lastRec = existingRecs[existingRecs.length - 1];
+        o.offset = (lastRec.options.offset || 0) + (lastRec.options.maxItems || 10);
+      }
+    }
     return o;
   }
 
