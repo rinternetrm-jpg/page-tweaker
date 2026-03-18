@@ -211,9 +211,10 @@
       const cols = options.columns || 1;
       const thumbW = options.thumbnailWidth || 168;
       const maxItems = options.maxItems || 10;
+      const offset = options.offset || 0;
       const showTitle = options.showTitle !== false;
       const showMeta = options.showMeta !== false;
-      const items = (data.items || []).slice(0, maxItems);
+      const items = (data.items || []).slice(offset, offset + maxItems);
 
       const el = document.createElement('div');
       el.className = 'pt-mockup pt-mockup-recommendations';
@@ -302,6 +303,37 @@
           </div>
         </div>
         <div style="padding:8px 0;">${itemsHtml}</div>
+      `;
+      return el;
+    }
+
+    // === Masthead (Logo + Suche) Mockup ===
+    renderMasthead(data) {
+      const el = document.createElement('div');
+      el.className = 'pt-mockup pt-mockup-masthead';
+      el.style.cssText = `
+        display: flex; align-items: center; gap: 16px; padding: 8px 16px;
+        background: ${this.c.bg}; border-bottom: 1px solid ${this.c.border};
+        font-family: system-ui, -apple-system, sans-serif; height: 56px;
+        border-radius: 8px;
+      `;
+
+      el.innerHTML = `
+        <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;">
+          <div style="width:32px;height:22px;background:#f00;border-radius:6px;display:flex;align-items:center;justify-content:center;">
+            <div style="width:0;height:0;border-left:10px solid #fff;border-top:6px solid transparent;border-bottom:6px solid transparent;margin-left:2px;"></div>
+          </div>
+          <span style="font-size:18px;font-weight:700;color:${this.c.textPrimary};letter-spacing:-1px;">YouTube</span>
+        </div>
+        <div style="flex:1;max-width:600px;position:relative;">
+          <input type="text" placeholder="${this._esc(data.searchText || 'Suchen')}" disabled
+            style="width:100%;padding:8px 12px;border:1px solid ${this.c.border};border-radius:20px;
+                   background:${this.c.bg};color:${this.c.textPrimary};font-size:14px;outline:none;">
+        </div>
+        <div style="margin-left:auto;display:flex;gap:12px;align-items:center;">
+          <div style="width:36px;height:36px;border-radius:50%;background:${this.c.chipBg};display:flex;align-items:center;justify-content:center;font-size:16px;">🔔</div>
+          <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);"></div>
+        </div>
       `;
       return el;
     }

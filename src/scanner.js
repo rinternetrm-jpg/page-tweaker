@@ -334,6 +334,29 @@
     }
   }
 
+  function extractMasthead() {
+    try {
+      const masthead = safeQuery(['ytd-masthead', '#masthead-container', '#masthead']);
+      if (!masthead) return null;
+
+      const logoUrl = safeImgSrc([
+        'ytd-masthead #logo-icon img',
+        'ytd-masthead #logo img',
+        '#masthead-logo img'
+      ]);
+
+      const searchText = safeQuery([
+        'ytd-masthead #search-input input',
+        'ytd-searchbox input#search'
+      ])?.placeholder || 'Suchen';
+
+      return { logoUrl, searchText };
+    } catch (e) {
+      console.warn('[PageTweaker] Scanner: Masthead Fehler', e);
+      return null;
+    }
+  }
+
   function extractChat() {
     try {
       const chatEl = safeQuery(['ytd-live-chat-frame', '#chat-container', '#chat']);
@@ -364,6 +387,7 @@
         { type: 'comments', data: extractComments() },
         { type: 'recommendations', data: extractRecommendations() },
         { type: 'playlist', data: extractPlaylist() },
+        { type: 'masthead', data: extractMasthead() },
         { type: 'chat', data: extractChat() }
       ].filter(c => c.data !== null)
     };
