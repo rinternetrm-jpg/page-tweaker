@@ -9,18 +9,9 @@
 
   // === YouTube wieder sichtbar machen (early-hide.css überschreiben) ===
   function showYouTube() {
-    // early-hide.css Regeln aufheben
-    const unhide = document.createElement('style');
-    unhide.id = 'pt-unhide';
-    unhide.textContent = `
-      ytd-app #content, ytd-app tp-yt-app-drawer, ytd-app #guide {
-        visibility: visible !important;
-        pointer-events: auto !important;
-        height: auto !important;
-        overflow: visible !important;
-      }
-    `;
-    document.head.appendChild(unhide);
+    // early-hide.css opacity aufheben
+    const app = document.querySelector('ytd-app');
+    if (app) app.style.cssText = 'opacity:1 !important;';
   }
 
   // === Hauptfunktion ===
@@ -147,13 +138,18 @@
       renderer.setTheme('dark');
     }
 
-    // === Original-Seite wird per CSS versteckt (im mastheadStyle unten) ===
+    // === Original-Seite komplett verstecken ===
+    const origApp = document.querySelector('ytd-app');
+    if (origApp) {
+      origApp.style.cssText = 'display:none !important;';
+    }
 
-    // Echten YouTube-Player merken
-    const playerContainer = document.querySelector('#player-container-inner') ||
-                            document.querySelector('#player-container') ||
-                            document.querySelector('ytd-player');
+    // Echten YouTube-Player ZUERST rausholen (bevor ytd-app versteckt wird)
     const moviePlayer = document.querySelector('#movie_player');
+    if (moviePlayer) {
+      document.body.appendChild(moviePlayer);
+      moviePlayer.style.cssText = 'position:fixed; visibility:hidden; z-index:100000;';
+    }
 
     // Canvas erstellen
     const canvas = document.createElement('div');
@@ -442,20 +438,14 @@
     // Masthead komplett per CSS (kein setProperty — das funktioniert nicht zuverlässig)
     const isDarkR = document.documentElement.hasAttribute('dark');
     const mhBgR = isDarkR ? '#0f0f0f' : '#ffffff';
-    const mastheadStyle = document.createElement('style');
-    mastheadStyle.id = 'pt-masthead-style';
-    mastheadStyle.textContent = `
-      ytd-masthead {
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        width: 100% !important;
-        z-index: 100001 !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
-      }
-    `;
-    document.head.appendChild(mastheadStyle);
-    inner.style.paddingTop = '56px';
+    // Header-Mockup immer oben einfügen (funktionale Suche)
+    const mastheadComp = scanResult.components.find(c => c.type === 'masthead');
+    if (mastheadComp) {
+      const headerRow = document.createElement('div');
+      headerRow.style.cssText = 'position:sticky;top:0;z-index:100001;width:100%;box-shadow:0 1px 3px rgba(0,0,0,0.2);';
+      headerRow.appendChild(renderer.renderMasthead(mastheadComp.data));
+      inner.insertBefore(headerRow, inner.firstChild);
+    }
 
     // YouTube Sidebar (Hamburger-Menü) funktional machen
     const sidebarStyle = document.createElement('style');
@@ -483,9 +473,6 @@
         mockupEl.innerHTML = '';
         mockupEl.style.background = '#000';
       }
-
-      // Player aus ytd-app herausnehmen und direkt in body hängen.
-      document.body.appendChild(moviePlayer);
 
       // CSS-Overrides für alle internen Player-Elemente
       const playerStyle = document.createElement('style');

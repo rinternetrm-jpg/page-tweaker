@@ -1,8 +1,6 @@
-/* Versteckt YouTube-Content sofort beim Laden, ABER Masthead bleibt sichtbar.
-   Content Script CSS hat höchste Priorität - kann nicht von Webpage-CSS überschrieben werden. */
-ytd-app #content,
-ytd-app tp-yt-app-drawer,
-ytd-app #guide {
-  visibility: hidden !important;
-  pointer-events: none !important;
+/* PageTweaker: Versteckt YouTube beim Laden um Flash zu verhindern.
+   Wird vom Restorer entfernt wenn kein Layout gespeichert ist. */
+ytd-app {
+  opacity: 0 !important;
+  transition: opacity 0.1s !important;
 }

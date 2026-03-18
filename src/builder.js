@@ -23,20 +23,12 @@
   let nextId = 1;
 
   // === Original-Seite verstecken (nicht zerstören!) ===
-  // Masthead per CSS fixieren (early-hide.css versteckt nur #content, nicht die Masthead)
-  const mastheadStyle = document.createElement('style');
-  mastheadStyle.id = 'pt-masthead-style';
-  mastheadStyle.textContent = `
-    ytd-masthead {
-      position: fixed !important;
-      top: 0 !important;
-      left: 0 !important;
-      width: 100% !important;
-      z-index: 1000001 !important;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2) !important;
-    }
-  `;
-  document.head.appendChild(mastheadStyle);
+  // ytd-app komplett verstecken
+  const origApp = document.querySelector('ytd-app');
+  if (origApp) {
+    origApp.style.cssText = 'display:none !important;';
+    origApp.dataset.ptOriginal = 'true';
+  }
 
   const originalPlayer = document.querySelector('#movie_player');
 
@@ -896,8 +888,6 @@
   function exitBuilder() {
     window.__ptBuilderActive = false;
     if (originalPlayer) originalPlayer.style.cssText = '';
-    const mhStyle = document.getElementById('pt-masthead-style');
-    if (mhStyle) mhStyle.remove();
     const root = document.querySelector('.pt-builder-root');
     if (root) root.remove();
     const style = document.getElementById('pt-builder-style');
