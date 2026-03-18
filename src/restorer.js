@@ -192,8 +192,9 @@
       // Zeile = Flex-Container
       const rowDiv = document.createElement('div');
       rowDiv.style.cssText = `
-        display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 16px;
-        align-items: flex-start;
+        display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 0;
+        align-items: flex-start; justify-content: center;
+        max-width: 1400px; margin: 0 auto;
       `;
 
       for (const item of row.items.sort((a, b) => a.x - b.x)) {
