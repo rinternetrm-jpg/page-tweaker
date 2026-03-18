@@ -371,68 +371,38 @@
       });
     }
 
-    // === Funktionale Buttons — triggern echte YouTube-Aktionen via MAIN world ===
-    function clickRealButton(selector) {
-      chrome.runtime.sendMessage({
-        action: 'clickElement',
-        selector: selector
-      });
-    }
+    // === Funktionale Buttons — data-pt-action Elemente verdrahten ===
+    const actionMap = {
+      'like': 'like-button-view-model button, #top-level-buttons-computed ytd-toggle-button-renderer:first-child button, button[aria-label*="Mag ich"]',
+      'dislike': 'dislike-button-view-model button, #top-level-buttons-computed ytd-toggle-button-renderer:nth-child(2) button',
+      'share': 'button[aria-label*="Teilen"], button[aria-label*="Share"]',
+      'save': 'button[aria-label*="Speichern"], button[aria-label*="Save"]',
+      'clip': 'button[aria-label*="Clip"]',
+      'subscribe': '#subscribe-button button, ytd-subscribe-button-renderer button',
+      'profile': '#avatar-btn, button[aria-label*="Konto"], button[aria-label*="Account"]',
+      'create': 'button[aria-label*="Erstellen"], button[aria-label*="Create"]',
+    };
 
-    function addFunctionalButtons(metaMockup) {
-      // Like-Button
-      metaMockup.querySelectorAll('span').forEach(span => {
-        const text = span.textContent;
-        if (text === '👍') {
-          span.parentElement.style.cursor = 'pointer';
-          span.parentElement.addEventListener('click', () => {
-            clickRealButton('like-button-view-model button, #top-level-buttons-computed ytd-toggle-button-renderer:first-child button');
-          });
-        }
-        if (text === '👎') {
-          span.parentElement.style.cursor = 'pointer';
-          span.parentElement.addEventListener('click', () => {
-            clickRealButton('dislike-button-view-model button, #top-level-buttons-computed ytd-toggle-button-renderer:nth-child(2) button');
-          });
-        }
-        if (text === 'Teilen') {
-          span.style.cursor = 'pointer';
-          span.addEventListener('click', () => {
-            clickRealButton('ytd-menu-renderer button[aria-label*="Teilen"], ytd-menu-renderer button[aria-label*="Share"]');
-          });
-        }
-      });
-    }
+    // Alle Buttons mit data-pt-action verdrahten
+    canvas.querySelectorAll('[data-pt-action]').forEach(btn => {
+      const action = btn.dataset.ptAction;
 
-    function addSubscribeAction(channelMockup) {
-      // Abonnieren-Button klickbar
-      const subBtn = channelMockup.querySelector('div[style*="cc0000"]');
-      if (subBtn) {
-        subBtn.style.cursor = 'pointer';
-        subBtn.addEventListener('click', () => {
-          clickRealButton('#subscribe-button button, ytd-subscribe-button-renderer button');
+      if (action === 'notifications') {
+        btn.addEventListener('click', () => window.open('https://www.youtube.com/feed/notifications', '_blank'));
+        return;
+      }
+
+      const selector = actionMap[action];
+      if (selector) {
+        btn.addEventListener('click', () => {
+          chrome.runtime.sendMessage({ action: 'clickElement', selector });
         });
       }
-    }
+    });
 
-    function addMastheadActions(mastheadMockup) {
-      // Glocke → Benachrichtigungen
-      const bell = mastheadMockup.querySelector('div[style*="border-radius:50%"]');
-      if (bell) {
-        bell.style.cursor = 'pointer';
-        bell.addEventListener('click', () => {
-          window.open('https://www.youtube.com/feed/notifications', '_blank');
-        });
-      }
-      // Profilbild → YouTube Studio / Profil
-      const avatar = mastheadMockup.querySelector('div[style*="linear-gradient"]');
-      if (avatar) {
-        avatar.style.cursor = 'pointer';
-        avatar.addEventListener('click', () => {
-          clickRealButton('#avatar-btn, button[aria-label*="Konto"], button[aria-label*="Account"]');
-        });
-      }
-    }
+    function addFunctionalButtons() {}
+    function addSubscribeAction() {}
+    function addMastheadActions() {}
 
     // Thumbnails klickbar machen
     function makeThumbsClickable(container) {

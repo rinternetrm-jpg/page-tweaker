@@ -88,17 +88,19 @@
         </div>
         ${data.likes ? `
         <div style="display:flex;gap:8px;margin-top:10px;">
-          <div style="display:flex;align-items:center;gap:6px;background:${this.c.chipBg};
+          <div data-pt-action="like" style="display:flex;align-items:center;gap:6px;background:${this.c.chipBg};
                       border-radius:18px;padding:6px 14px;font-size:13px;font-weight:500;
-                      color:${this.c.textPrimary};">
+                      color:${this.c.textPrimary};cursor:pointer;" title="Mag ich">
             <span>👍</span> <span>${this._esc(data.likes)}</span>
-            <span style="margin:0 4px;color:${this.c.border};">|</span>
-            <span>👎</span>
           </div>
-          <div style="background:${this.c.chipBg};border-radius:18px;padding:6px 14px;
-                      font-size:13px;color:${this.c.textPrimary};">Teilen</div>
-          <div style="background:${this.c.chipBg};border-radius:18px;padding:6px 14px;
-                      font-size:13px;color:${this.c.textPrimary};">···</div>
+          <div data-pt-action="dislike" style="background:${this.c.chipBg};border-radius:18px;padding:6px 14px;
+                      font-size:13px;color:${this.c.textPrimary};cursor:pointer;" title="Mag ich nicht">👎</div>
+          <div data-pt-action="share" style="background:${this.c.chipBg};border-radius:18px;padding:6px 14px;
+                      font-size:13px;color:${this.c.textPrimary};cursor:pointer;" title="Teilen">Teilen</div>
+          <div data-pt-action="save" style="background:${this.c.chipBg};border-radius:18px;padding:6px 14px;
+                      font-size:13px;color:${this.c.textPrimary};cursor:pointer;" title="Speichern">Speichern</div>
+          <div data-pt-action="clip" style="background:${this.c.chipBg};border-radius:18px;padding:6px 14px;
+                      font-size:13px;color:${this.c.textPrimary};cursor:pointer;" title="Clip">Clip</div>
         </div>` : ''}
       `;
       return el;
@@ -129,8 +131,8 @@
           </div>
           ${data.subscriberCount ? `<div style="font-size:12px;color:${this.c.textSecondary};">${this._esc(data.subscriberCount)}</div>` : ''}
         </div>
-        <div style="background:#cc0000;color:#fff;border-radius:18px;padding:8px 16px;
-                    font-size:14px;font-weight:500;white-space:nowrap;">Abonnieren</div>
+        <div data-pt-action="subscribe" style="background:#cc0000;color:#fff;border-radius:18px;padding:8px 16px;
+                    font-size:14px;font-weight:500;white-space:nowrap;cursor:pointer;" title="Kanal abonnieren">Abonnieren</div>
       `;
       return el;
     }
@@ -342,9 +344,14 @@
           </button>
         </form>
         <div style="margin-left:auto;display:flex;gap:12px;align-items:center;">
-          <div style="width:36px;height:36px;border-radius:50%;background:${this.c.chipBg};
-                      display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;">🔔</div>
-          <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);"></div>
+          <div data-pt-action="create" style="width:36px;height:36px;border-radius:50%;background:${this.c.chipBg};
+                      display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;"
+                      title="Erstellen">+</div>
+          <div data-pt-action="notifications" style="width:36px;height:36px;border-radius:50%;background:${this.c.chipBg};
+                      display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;"
+                      title="Benachrichtigungen">🔔</div>
+          <div data-pt-action="profile" style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);cursor:pointer;"
+                      title="Profil"></div>
         </div>
       `;
 
