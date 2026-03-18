@@ -244,98 +244,115 @@
     const hideFlash = document.getElementById('pt-hide-flash');
     if (hideFlash) hideFlash.remove();
 
-    // === Thumbnails klickbar machen — Video wechseln bei Klick ===
-    // YouTube's Player-API ist nur im MAIN world verfügbar,
-    // nicht im isolated world wo Content Scripts laufen.
-    // Daher: Message an Background → executeScript mit world:'MAIN'
-    canvas.querySelectorAll('.pt-mockup-recommendations [data-video-id]').forEach(thumb => {
-      thumb.style.cursor = 'pointer';
-      thumb.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const videoId = thumb.dataset.videoId;
-        if (!videoId) return;
+    // === Video wechseln (ohne Seiten-Reload) ===
+    function switchVideo(videoId) {
+      if (!videoId) return;
+      console.log('[PageTweaker] Video wechseln zu:', videoId);
 
-        console.log('[PageTweaker] Video wechseln zu:', videoId);
+      // 1. Video sofort im Player wechseln (MAIN world)
+      chrome.runtime.sendMessage({ action: 'loadVideo', videoId });
 
-        // Flag setzen damit der Restorer das Layout automatisch anwendet
-        chrome.storage.local.set({ pt_auto_apply: true }, () => {
-          // Echten Page-Reload erzwingen (nicht YouTube SPA-Navigation)
-          // location.replace + volle URL verhindert SPA-Interception
-          const newUrl = window.location.origin + '/watch?v=' + videoId;
-          window.stop(); // Aktuelle Seite stoppen
-          window.location.replace(newUrl);
+      // 2. URL aktualisieren ohne Navigation
+      history.pushState({}, '', '/watch?v=' + videoId);
+
+      // 3. Neue Video-Daten im Hintergrund fetchen
+      chrome.runtime.sendMessage({ action: 'fetchVideoData', videoId }, (resp) => {
+        if (!resp || !resp.ok) {
+          console.warn('[PageTweaker] Keine Daten für Video:', videoId);
+          return;
+        }
+
+        // Empfehlungen aktualisieren
+        if (resp.recommendations.length > 0) {
+          updateRecommendationBlocks({ items: resp.recommendations });
+        }
+
+        // Metadaten aktualisieren
+        if (resp.metadata) {
+          const metaMockup = document.querySelector('.pt-mockup-metadata');
+          if (metaMockup) {
+            const parent = metaMockup.parentElement;
+            const newMeta = renderer.renderMetadata(resp.metadata);
+            parent.replaceChild(newMeta, metaMockup);
+          }
+        }
+
+        // Kanal-Info aktualisieren
+        if (resp.channel) {
+          const chanMockup = document.querySelector('.pt-mockup-channel');
+          if (chanMockup) {
+            const parent = chanMockup.parentElement;
+            const newChan = renderer.renderChannelInfo(resp.channel);
+            parent.replaceChild(newChan, chanMockup);
+          }
+        }
+
+        // Beschreibung aktualisieren
+        if (resp.description) {
+          const descMockup = document.querySelector('.pt-mockup-description');
+          if (descMockup) {
+            const parent = descMockup.parentElement;
+            const newDesc = renderer.renderDescription(resp.description);
+            parent.replaceChild(newDesc, descMockup);
+          }
+        }
+
+        console.log('[PageTweaker] Alle Mockups aktualisiert für:', videoId);
+      });
+    }
+
+    // Empfehlungs-Blöcke aktualisieren (gemeinsam genutzt von Video-Wechsel + Suche)
+    function updateRecommendationBlocks(data) {
+      const recWrappers = document.querySelectorAll('.pt-mockup-recommendations');
+      const recItems = layout.items.filter(i => i.type === 'recommendations');
+
+      recWrappers.forEach((oldRec, idx) => {
+        try {
+          const opts = recItems[idx]?.options || {};
+          const offset = opts.offset || 0;
+          const maxItems = opts.maxItems || 10;
+          const sliced = data.items.slice(offset, offset + maxItems);
+          const renderOpts = { ...opts, offset: 0 };
+          const newMockup = renderer.renderRecommendations({ items: sliced }, renderOpts);
+
+          oldRec.innerHTML = newMockup.innerHTML;
+          oldRec.style.cssText = newMockup.style.cssText;
+
+          // Neue Thumbnails klickbar machen
+          makeThumbsClickable(oldRec);
+        } catch (err) {
+          console.error('[PageTweaker] Block', idx, 'Fehler:', err);
+        }
+      });
+    }
+
+    // Thumbnails klickbar machen
+    function makeThumbsClickable(container) {
+      container.querySelectorAll('[data-video-id]').forEach(thumb => {
+        thumb.style.cursor = 'pointer';
+        thumb.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          switchVideo(thumb.dataset.videoId);
         });
       });
-    });
+    }
+
+    // Initiale Thumbnails klickbar machen
+    canvas.querySelectorAll('.pt-mockup-recommendations').forEach(rec => makeThumbsClickable(rec));
 
     // === Suche: Ergebnisse in Empfehlungs-Blöcke laden ===
     window.__ptSearchHandler = (query) => {
       if (!query) return;
-
       console.log('[PageTweaker] Suche:', query);
 
-      // Suchergebnisse vom Background holen
       chrome.runtime.sendMessage({ action: 'searchYouTube', query }, (resp) => {
         if (!resp || !resp.ok || !resp.items.length) {
           console.warn('[PageTweaker] Keine Suchergebnisse');
           return;
         }
-
         console.log('[PageTweaker] Suchergebnisse:', resp.items.length);
-
-        // Alle Empfehlungs-Blöcke im gesamten Dokument finden
-        const recWrappers = document.querySelectorAll('.pt-mockup-recommendations');
-        console.log('[PageTweaker] Empfehlungs-Blöcke gefunden:', recWrappers.length);
-
-        const recItems = layout.items.filter(i => i.type === 'recommendations');
-
-        recWrappers.forEach((oldRec, idx) => {
-          try {
-            const parent = oldRec.parentElement;
-            const opts = recItems[idx]?.options || {};
-            const offset = opts.offset || 0;
-            const maxItems = opts.maxItems || 10;
-
-            console.log('[PageTweaker] Block', idx, ': offset=', offset, 'maxItems=', maxItems);
-
-            // Neue Daten mit Offset
-            const sliced = resp.items.slice(offset, offset + maxItems);
-            console.log('[PageTweaker] Block', idx, 'zeigt', sliced.length, 'Items:', sliced.map(i=>i.title).slice(0,3));
-
-            const searchData = { items: sliced };
-            // Offset auf 0 setzen weil wir schon gesliced haben
-            const renderOpts = { ...opts, offset: 0 };
-            const newMockup = renderer.renderRecommendations(searchData, renderOpts);
-            console.log('[PageTweaker] Block', idx, 'neues Mockup:', newMockup?.tagName, newMockup?.children?.length, 'children');
-
-            // Altes Element ersetzen
-            oldRec.innerHTML = newMockup.innerHTML;
-            oldRec.style.cssText = newMockup.style.cssText;
-            console.log('[PageTweaker] Block', idx, 'aktualisiert!');
-
-          // Neue Thumbnails klickbar machen
-          function makeClickable(container) {
-            container.querySelectorAll('[data-video-id]').forEach(thumb => {
-              thumb.style.cursor = 'pointer';
-              thumb.addEventListener('click', (ev) => {
-                ev.preventDefault();
-                ev.stopPropagation();
-                const vid = thumb.dataset.videoId;
-                if (!vid) return;
-                chrome.storage.local.set({ pt_auto_apply: true }, () => {
-                  const newUrl = window.location.origin + '/watch?v=' + vid;
-                  window.stop();
-                  window.location.replace(newUrl);
-                });
-              });
-            });
-          }
-          makeClickable(oldRec);
-          } catch(err) {
-            console.error('[PageTweaker] Block', idx, 'Fehler:', err);
-          }
-        });
+        updateRecommendationBlocks({ items: resp.items });
       });
     };
 

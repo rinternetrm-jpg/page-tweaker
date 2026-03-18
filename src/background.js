@@ -5,6 +5,101 @@
 // 3. CSP blockiert new Function() / eval auf YouTube
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.action === 'fetchVideoData') {
+    // Video-Seite fetchen und Empfehlungen/Metadaten extrahieren
+    const videoId = msg.videoId;
+    if (!videoId) return;
+
+    (async () => {
+      try {
+        const url = 'https://www.youtube.com/watch?v=' + encodeURIComponent(videoId);
+        const resp = await fetch(url);
+        const html = await resp.text();
+
+        const match = html.match(/var ytInitialData\s*=\s*(\{.+?\});\s*<\/script>/s);
+        if (!match) {
+          sendResponse({ ok: false });
+          return;
+        }
+
+        const data = JSON.parse(match[1]);
+        const result = { ok: true, recommendations: [], comments: [], metadata: null, channel: null, description: null };
+
+        // Empfehlungen extrahieren
+        function findRecommendations(obj) {
+          if (!obj || typeof obj !== 'object') return;
+          if (obj.compactVideoRenderer) {
+            const vr = obj.compactVideoRenderer;
+            result.recommendations.push({
+              videoId: vr.videoId,
+              title: vr.title?.simpleText || vr.title?.runs?.[0]?.text || 'Video',
+              channelName: vr.longBylineText?.runs?.[0]?.text || vr.shortBylineText?.runs?.[0]?.text || '',
+              viewCount: vr.viewCountText?.simpleText || '',
+              duration: vr.lengthText?.simpleText || '',
+              thumbnailUrl: vr.thumbnail?.thumbnails?.pop()?.url || `https://i.ytimg.com/vi/${vr.videoId}/mqdefault.jpg`,
+              timeAgo: vr.publishedTimeText?.simpleText || ''
+            });
+          }
+          // Neue YouTube-Struktur
+          if (obj.videoRenderer) {
+            const vr = obj.videoRenderer;
+            result.recommendations.push({
+              videoId: vr.videoId,
+              title: vr.title?.runs?.[0]?.text || 'Video',
+              channelName: vr.longBylineText?.runs?.[0]?.text || '',
+              viewCount: vr.viewCountText?.simpleText || '',
+              duration: vr.lengthText?.simpleText || '',
+              thumbnailUrl: vr.thumbnail?.thumbnails?.pop()?.url || `https://i.ytimg.com/vi/${vr.videoId}/mqdefault.jpg`,
+              timeAgo: vr.publishedTimeText?.simpleText || ''
+            });
+          }
+          if (Array.isArray(obj)) obj.forEach(findRecommendations);
+          else Object.values(obj).forEach(findRecommendations);
+        }
+
+        // Metadaten extrahieren
+        function findMetadata(obj) {
+          if (!obj || typeof obj !== 'object') return;
+          if (obj.videoPrimaryInfoRenderer) {
+            const vp = obj.videoPrimaryInfoRenderer;
+            result.metadata = {
+              title: vp.title?.runs?.[0]?.text || '',
+              viewCount: vp.viewCount?.videoViewCountRenderer?.viewCount?.simpleText || '',
+              uploadDate: vp.dateText?.simpleText || '',
+              likes: vp.videoActions?.menuRenderer?.topLevelButtons?.[0]?.segmentedLikeDislikeButtonViewModel?.likeButtonViewModel?.likeButtonViewModel?.toggleButtonViewModel?.toggleButtonViewModel?.defaultButtonViewModel?.buttonViewModel?.title || ''
+            };
+          }
+          if (obj.videoSecondaryInfoRenderer) {
+            const vs = obj.videoSecondaryInfoRenderer;
+            result.channel = {
+              channelName: vs.owner?.videoOwnerRenderer?.title?.runs?.[0]?.text || '',
+              channelAvatarUrl: vs.owner?.videoOwnerRenderer?.thumbnail?.thumbnails?.pop()?.url || '',
+              subscriberCount: vs.owner?.videoOwnerRenderer?.subscriberCountText?.simpleText || '',
+              isVerified: false
+            };
+            result.description = {
+              text: vs.attributedDescription?.content?.slice(0, 200) || '',
+              isExpanded: false
+            };
+          }
+          if (Array.isArray(obj)) obj.forEach(findMetadata);
+          else Object.values(obj).forEach(findMetadata);
+        }
+
+        findRecommendations(data);
+        findMetadata(data);
+
+        console.log('[PT Background] fetchVideoData:', result.recommendations.length, 'recs');
+        sendResponse(result);
+      } catch (e) {
+        console.error('[PT Background] fetchVideoData error:', e);
+        sendResponse({ ok: false, error: e.message });
+      }
+    })();
+
+    return true;
+  }
+
   if (msg.action === 'searchYouTube') {
     // YouTube-Suche: HTML fetchen und Video-Daten extrahieren
     const query = msg.query;
