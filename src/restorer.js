@@ -436,10 +436,9 @@
       });
     };
 
-    // === Echte YouTube-Masthead über den Platzhalter legen ===
-    const mastheadPlaceholder = canvas.querySelector('.pt-mockup-masthead-placeholder');
+    // === Echte YouTube-Masthead IMMER oben fixieren ===
     const realMasthead = document.querySelector('ytd-masthead');
-    if (mastheadPlaceholder && realMasthead) {
+    if (realMasthead) {
       document.body.appendChild(realMasthead);
       realMasthead.style.cssText = `
         position: fixed !important;
@@ -449,7 +448,7 @@
         visibility: visible !important;
         pointer-events: auto !important;
       `;
-      // Canvas etwas Padding oben geben damit Inhalt nicht unter der Masthead verschwindet
+      // Canvas Padding oben damit Inhalt nicht unter der Masthead verschwindet
       inner.style.paddingTop = '56px';
     }
 

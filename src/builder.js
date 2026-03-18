@@ -29,6 +29,17 @@
     origApp.dataset.ptOriginal = 'true';
   }
 
+  // Echte YouTube-Masthead oben fixieren (immer sichtbar, nicht editierbar)
+  const realMasthead = document.querySelector('ytd-masthead');
+  if (realMasthead) {
+    document.body.appendChild(realMasthead);
+    realMasthead.style.cssText = `
+      position: fixed !important; top: 0 !important; left: 0 !important;
+      width: 100% !important; z-index: 1000001 !important;
+      visibility: visible !important; pointer-events: auto !important;
+    `;
+  }
+
   const originalPlayer = document.querySelector('#movie_player');
 
   const styleEl = document.createElement('style');
@@ -136,6 +147,7 @@
 
     let itemsHtml = '';
     for (const comp of scanResult.components) {
+      if (comp.type === 'masthead' || comp.type === 'chat') continue; // Masthead ist fest, Chat nicht unterstützt
       const info = typeLabels[comp.type] || { icon: '📦', label: comp.type };
       itemsHtml += `
         <div class="pt-palette-item" data-type="${comp.type}" draggable="true">
@@ -885,6 +897,9 @@
   function exitBuilder() {
     window.__ptBuilderActive = false;
     if (originalPlayer) originalPlayer.style.cssText = '';
+    if (realMasthead) {
+      realMasthead.style.cssText = '';
+    }
     const root = document.querySelector('.pt-builder-root');
     if (root) root.remove();
     const style = document.getElementById('pt-builder-style');
@@ -912,10 +927,10 @@
 
       .pt-builder-root {
         display: flex;
-        height: 100vh;
+        height: calc(100vh - 56px);
         width: 100vw;
         position: fixed;
-        top: 0;
+        top: 56px;
         left: 0;
         z-index: 999999;
       }
