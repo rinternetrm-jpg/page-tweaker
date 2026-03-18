@@ -228,6 +228,10 @@
     document.body.appendChild(canvas);
     isRestored = true;
 
+    // Flash-Hide entfernen (Seite ist jetzt im PageTweaker-Layout)
+    const hideFlash = document.getElementById('pt-hide-flash');
+    if (hideFlash) hideFlash.remove();
+
     // === Thumbnails klickbar machen — Video wechseln bei Klick ===
     // YouTube's Player-API ist nur im MAIN world verfügbar,
     // nicht im isolated world wo Content Scripts laufen.
@@ -268,36 +272,57 @@
 
         console.log('[PageTweaker] Suchergebnisse:', resp.items.length);
 
-        // Alle Empfehlungs-Blöcke mit Suchergebnissen aktualisieren
-        const recWrappers = inner.querySelectorAll('.pt-mockup-recommendations');
-        recWrappers.forEach((oldRec, idx) => {
-          const parent = oldRec.parentElement;
-          const recItem = layout.items.filter(i => i.type === 'recommendations')[idx];
-          const opts = recItem?.options || {};
-          const offset = opts.offset || 0;
-          const maxItems = opts.maxItems || 10;
+        // Alle Empfehlungs-Blöcke im gesamten Dokument finden
+        const recWrappers = document.querySelectorAll('.pt-mockup-recommendations');
+        console.log('[PageTweaker] Empfehlungs-Blöcke gefunden:', recWrappers.length);
 
-          // Neue Daten mit Offset
-          const searchData = { items: resp.items.slice(offset, offset + maxItems) };
-          const newMockup = renderer.renderRecommendations(searchData, opts);
-          parent.innerHTML = '';
-          parent.appendChild(newMockup);
+        const recItems = layout.items.filter(i => i.type === 'recommendations');
+
+        recWrappers.forEach((oldRec, idx) => {
+          try {
+            const parent = oldRec.parentElement;
+            const opts = recItems[idx]?.options || {};
+            const offset = opts.offset || 0;
+            const maxItems = opts.maxItems || 10;
+
+            console.log('[PageTweaker] Block', idx, ': offset=', offset, 'maxItems=', maxItems);
+
+            // Neue Daten mit Offset
+            const sliced = resp.items.slice(offset, offset + maxItems);
+            console.log('[PageTweaker] Block', idx, 'zeigt', sliced.length, 'Items:', sliced.map(i=>i.title).slice(0,3));
+
+            const searchData = { items: sliced };
+            // Offset auf 0 setzen weil wir schon gesliced haben
+            const renderOpts = { ...opts, offset: 0 };
+            const newMockup = renderer.renderRecommendations(searchData, renderOpts);
+            console.log('[PageTweaker] Block', idx, 'neues Mockup:', newMockup?.tagName, newMockup?.children?.length, 'children');
+
+            // Altes Element ersetzen
+            oldRec.innerHTML = newMockup.innerHTML;
+            oldRec.style.cssText = newMockup.style.cssText;
+            console.log('[PageTweaker] Block', idx, 'aktualisiert!');
 
           // Neue Thumbnails klickbar machen
-          parent.querySelectorAll('[data-video-id]').forEach(thumb => {
-            thumb.style.cursor = 'pointer';
-            thumb.addEventListener('click', (ev) => {
-              ev.preventDefault();
-              ev.stopPropagation();
-              const vid = thumb.dataset.videoId;
-              if (!vid) return;
-              chrome.storage.local.set({ pt_auto_apply: true }, () => {
-                const newUrl = window.location.origin + '/watch?v=' + vid;
-                window.stop();
-                window.location.replace(newUrl);
+          function makeClickable(container) {
+            container.querySelectorAll('[data-video-id]').forEach(thumb => {
+              thumb.style.cursor = 'pointer';
+              thumb.addEventListener('click', (ev) => {
+                ev.preventDefault();
+                ev.stopPropagation();
+                const vid = thumb.dataset.videoId;
+                if (!vid) return;
+                chrome.storage.local.set({ pt_auto_apply: true }, () => {
+                  const newUrl = window.location.origin + '/watch?v=' + vid;
+                  window.stop();
+                  window.location.replace(newUrl);
+                });
               });
             });
-          });
+          }
+          makeClickable(oldRec);
+          } catch(err) {
+            console.error('[PageTweaker] Block', idx, 'Fehler:', err);
+          }
         });
       });
     };

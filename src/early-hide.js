@@ -6,7 +6,7 @@
     if (result.pt_auto_apply) {
       const style = document.createElement('style');
       style.id = 'pt-hide-flash';
-      style.textContent = 'body, ytd-app { visibility: hidden !important; }';
+      style.textContent = 'ytd-app { visibility: hidden !important; }';
       (document.head || document.documentElement).appendChild(style);
     }
   } catch(e) {}
