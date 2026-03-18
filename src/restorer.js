@@ -445,11 +445,13 @@
         el.style.setProperty('pointer-events', 'auto', 'important');
         el = el.parentElement;
       }
+      const isDark = document.documentElement.hasAttribute('dark');
       realMasthead.style.setProperty('position', 'fixed', 'important');
       realMasthead.style.setProperty('top', '0', 'important');
       realMasthead.style.setProperty('left', '0', 'important');
       realMasthead.style.setProperty('width', '100%', 'important');
       realMasthead.style.setProperty('z-index', '100001', 'important');
+      realMasthead.style.setProperty('background-color', isDark ? '#0f0f0f' : '#ffffff', 'important');
       realMasthead.querySelectorAll('*').forEach(child => {
         child.style.setProperty('visibility', 'visible', 'important');
       });
