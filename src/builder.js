@@ -67,6 +67,7 @@
   document.head.appendChild(styleEl);
 
   document.body.classList.add('pt-builder-body');
+  document.documentElement.classList.add('pt-builder-html');
 
   // === Layout erstellen ===
   const root = document.createElement('div');
@@ -924,6 +925,7 @@
     const style = document.getElementById('pt-builder-style');
     if (style) style.remove();
     document.body.classList.remove('pt-builder-body');
+    document.documentElement.classList.remove('pt-builder-html');
     document.querySelectorAll('[data-pt-original]').forEach(el => {
       el.style.cssText = '';
       delete el.dataset.ptOriginal;
@@ -935,13 +937,20 @@
     return `
       * { margin: 0; padding: 0; box-sizing: border-box; }
 
-      .pt-builder-body {
+      html.pt-builder-html, .pt-builder-body {
         font-family: system-ui, -apple-system, sans-serif;
-        background: transparent !important;
         color: #e0e0e0;
-        overflow: hidden;
-        height: 100vh;
-        width: 100vw;
+        overflow: hidden !important;
+        height: 100vh !important;
+        width: 100vw !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      html.pt-builder-html {
+        background: #0f0f0f !important;
+      }
+      .pt-builder-body {
+        background: transparent !important;
       }
 
       .pt-builder-root {
