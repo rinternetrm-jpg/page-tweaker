@@ -442,7 +442,7 @@
         visibility: hidden !important; pointer-events: none !important;
         height: 0 !important; overflow: hidden !important;
       }
-      ytd-app, ytd-app > *, ytd-app > * > ytd-masthead {
+      ytd-app, ytd-app > *, #masthead-container, #masthead-container > * {
         visibility: visible !important;
       }
       ytd-masthead, ytd-masthead *, ytd-masthead #container, ytd-masthead #background {
