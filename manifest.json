@@ -23,8 +23,8 @@
   },
   "content_scripts": [
     {
-      "matches": ["*://*.youtube.com/*"],
-      "js": ["src/early-hide.js"],
+      "matches": ["*://*.youtube.com/watch*"],
+      "css": ["src/early-hide.css"],
       "run_at": "document_start"
     },
     {

@@ -1,0 +1,6 @@
+/* Versteckt YouTube sofort beim Laden.
+   Der Restorer zeigt entweder das PageTweaker-Layout
+   oder entfernt dieses CSS wenn kein Layout gespeichert ist. */
+ytd-app {
+  visibility: hidden !important;
+}

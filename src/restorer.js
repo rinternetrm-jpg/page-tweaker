@@ -7,6 +7,15 @@
   let lastUrl = location.href;
   let isRestored = false;
 
+  // === YouTube wieder sichtbar machen (early-hide.css überschreiben) ===
+  function showYouTube() {
+    const app = document.querySelector('ytd-app');
+    if (app) app.style.setProperty('visibility', 'visible', 'important');
+    // Flash-hide Style entfernen falls vorhanden
+    const hideFlash = document.getElementById('pt-hide-flash');
+    if (hideFlash) hideFlash.remove();
+  }
+
   // === Hauptfunktion ===
   async function checkAndApplyLayout() {
     const domain = location.hostname;
@@ -17,7 +26,8 @@
     const layout = layouts[domain];
 
     if (!layout || !layout.items || layout.items.length === 0) {
-      // Kein Layout gespeichert — Floating-Buttons entfernen falls vorhanden
+      // Kein Layout gespeichert — YouTube wieder anzeigen (CSS wurde per Manifest versteckt)
+      showYouTube();
       removeFloatingButtons();
       return;
     }
@@ -31,6 +41,8 @@
       await chrome.storage.local.remove('pt_auto_apply');
       applyLayout(layout);
     } else {
+      // YouTube wieder anzeigen und Floating-Buttons zeigen
+      showYouTube();
       showFloatingButtons(layout);
     }
   }
