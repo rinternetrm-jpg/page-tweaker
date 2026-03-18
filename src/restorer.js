@@ -439,28 +439,19 @@
     // === Echte YouTube-Masthead IMMER oben fixieren ===
     const realMasthead = document.querySelector('ytd-masthead');
     if (realMasthead) {
-      // YouTube CSS-Variablen kopieren (werden von ytd-app geerbt)
-      const ytApp = document.querySelector('ytd-app');
-      if (ytApp) {
-        const ytStyles = getComputedStyle(ytApp);
-        ['--yt-spec-base-background', '--yt-spec-brand-background-solid', '--yt-spec-general-background-a',
-         '--yt-spec-text-primary', '--yt-spec-text-secondary', '--yt-spec-icon-inactive',
-         '--yt-spec-10-percent-layer', '--yt-spec-badge-chip-background', '--yt-spec-menu-background'
-        ].forEach(v => {
-          const val = ytStyles.getPropertyValue(v);
-          if (val) realMasthead.style.setProperty(v, val);
-        });
-      }
+      const isDark = document.documentElement.hasAttribute('dark') ||
+                     document.querySelector('html[dark]') !== null;
+      const mastheadBg = isDark ? '#0f0f0f' : '#ffffff';
+
       document.body.appendChild(realMasthead);
-      realMasthead.style.cssText += `
-        position: fixed !important;
-        top: 0 !important; left: 0 !important;
-        width: 100% !important;
-        z-index: 100001 !important;
-        visibility: visible !important;
-        pointer-events: auto !important;
-        background: var(--yt-spec-base-background, #fff) !important;
-      `;
+      realMasthead.style.setProperty('position', 'fixed', 'important');
+      realMasthead.style.setProperty('top', '0', 'important');
+      realMasthead.style.setProperty('left', '0', 'important');
+      realMasthead.style.setProperty('width', '100%', 'important');
+      realMasthead.style.setProperty('z-index', '100001', 'important');
+      realMasthead.style.setProperty('visibility', 'visible', 'important');
+      realMasthead.style.setProperty('pointer-events', 'auto', 'important');
+      realMasthead.style.setProperty('background', mastheadBg, 'important');
       inner.style.paddingTop = '56px';
     }
 

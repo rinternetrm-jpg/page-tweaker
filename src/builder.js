@@ -32,25 +32,20 @@
   // Echte YouTube-Masthead oben fixieren (immer sichtbar, nicht editierbar)
   const realMasthead = document.querySelector('ytd-masthead');
   if (realMasthead) {
-    // YouTube CSS-Variablen kopieren (werden von ytd-app geerbt)
-    const ytApp = document.querySelector('ytd-app');
-    if (ytApp) {
-      const ytStyles = getComputedStyle(ytApp);
-      const bgColor = ytStyles.getPropertyValue('--yt-spec-base-background') || '#fff';
-      realMasthead.style.setProperty('--yt-spec-base-background', bgColor);
-      realMasthead.style.setProperty('--yt-spec-brand-background-solid', ytStyles.getPropertyValue('--yt-spec-brand-background-solid') || bgColor);
-      realMasthead.style.setProperty('--yt-spec-general-background-a', ytStyles.getPropertyValue('--yt-spec-general-background-a') || bgColor);
-      realMasthead.style.setProperty('--yt-spec-text-primary', ytStyles.getPropertyValue('--yt-spec-text-primary') || '#0f0f0f');
-      realMasthead.style.setProperty('--yt-spec-text-secondary', ytStyles.getPropertyValue('--yt-spec-text-secondary') || '#606060');
-      realMasthead.style.setProperty('--yt-spec-icon-inactive', ytStyles.getPropertyValue('--yt-spec-icon-inactive') || '#606060');
-    }
+    // YouTube Dark/Light Mode Farbe ermitteln
+    const isDark = document.documentElement.hasAttribute('dark') ||
+                   document.querySelector('html[dark]') !== null;
+    const mastheadBg = isDark ? '#0f0f0f' : '#ffffff';
+
     document.body.appendChild(realMasthead);
-    realMasthead.style.cssText += `
-      position: fixed !important; top: 0 !important; left: 0 !important;
-      width: 100% !important; z-index: 1000001 !important;
-      visibility: visible !important; pointer-events: auto !important;
-      background: var(--yt-spec-base-background, #fff) !important;
-    `;
+    realMasthead.style.setProperty('position', 'fixed', 'important');
+    realMasthead.style.setProperty('top', '0', 'important');
+    realMasthead.style.setProperty('left', '0', 'important');
+    realMasthead.style.setProperty('width', '100%', 'important');
+    realMasthead.style.setProperty('z-index', '1000001', 'important');
+    realMasthead.style.setProperty('visibility', 'visible', 'important');
+    realMasthead.style.setProperty('pointer-events', 'auto', 'important');
+    realMasthead.style.setProperty('background', mastheadBg, 'important');
   }
 
   // YouTube Sidebar (Hamburger-Menü) auch sichtbar + funktional machen
