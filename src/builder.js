@@ -937,7 +937,7 @@
 
       .pt-builder-body {
         font-family: system-ui, -apple-system, sans-serif;
-        background: #1a1a2e;
+        background: transparent !important;
         color: #e0e0e0;
         overflow: hidden;
         height: 100vh;
@@ -952,6 +952,7 @@
         top: 56px;
         left: 0;
         z-index: 999999;
+        background: #1a1a2e;
       }
 
       /* === Canvas Area === */
