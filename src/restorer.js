@@ -140,11 +140,7 @@
       renderer.setTheme('dark');
     }
 
-    // === Original-Seite VERSTECKEN (außer Masthead) ===
-    const origApp = document.querySelector('ytd-app');
-    if (origApp) {
-      origApp.style.cssText = 'visibility:hidden !important; pointer-events:none !important;';
-    }
+    // === Original-Seite wird per CSS versteckt (im mastheadStyle unten) ===
 
     // Echten YouTube-Player merken
     const playerContainer = document.querySelector('#player-container-inner') ||
@@ -436,37 +432,37 @@
     };
 
     // === Echte YouTube-Masthead IMMER oben fixieren ===
-    // Masthead + alle Eltern bis ytd-app sichtbar machen
-    const realMasthead = document.querySelector('ytd-masthead');
-    if (realMasthead) {
-      let el = realMasthead;
-      while (el && el.tagName !== 'BODY') {
-        el.style.setProperty('visibility', 'visible', 'important');
-        el.style.setProperty('pointer-events', 'auto', 'important');
-        el = el.parentElement;
-      }
-      const isDark = document.documentElement.hasAttribute('dark');
-      const mhBg = isDark ? '#0f0f0f' : '#ffffff';
-      realMasthead.style.setProperty('position', 'fixed', 'important');
-      realMasthead.style.setProperty('top', '0', 'important');
-      realMasthead.style.setProperty('left', '0', 'important');
-      realMasthead.style.setProperty('width', '100%', 'important');
-      realMasthead.style.setProperty('z-index', '100001', 'important');
-      realMasthead.style.setProperty('box-shadow', '0 1px 3px rgba(0,0,0,0.3)', 'important');
-      realMasthead.style.setProperty('background', mhBg, 'important');
-      const mhInner = realMasthead.querySelector('#container, #masthead-container, div');
-      if (mhInner) mhInner.style.setProperty('background', mhBg, 'important');
-      realMasthead.querySelectorAll('*').forEach(child => {
-        child.style.setProperty('visibility', 'visible', 'important');
-      });
-    }
-
-    // Nicht-Masthead Inhalte verstecken
+    // Masthead komplett per CSS (kein setProperty — das funktioniert nicht zuverlässig)
+    const isDarkR = document.documentElement.hasAttribute('dark');
+    const mhBgR = isDarkR ? '#0f0f0f' : '#ffffff';
     const mastheadStyle = document.createElement('style');
     mastheadStyle.id = 'pt-masthead-style';
     mastheadStyle.textContent = `
-      ytd-app #content { visibility: hidden !important; pointer-events: none !important; height: 0 !important; overflow: hidden !important; }
-      ytd-app tp-yt-app-drawer { visibility: hidden !important; pointer-events: none !important; }
+      ytd-app #content, ytd-app tp-yt-app-drawer {
+        visibility: hidden !important; pointer-events: none !important;
+        height: 0 !important; overflow: hidden !important;
+      }
+      ytd-app, ytd-app > *, ytd-app > * > ytd-masthead {
+        visibility: visible !important;
+      }
+      ytd-masthead, ytd-masthead *, ytd-masthead #container, ytd-masthead #background {
+        visibility: visible !important;
+        pointer-events: auto !important;
+      }
+      ytd-masthead {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        z-index: 100001 !important;
+        background-color: ${mhBgR} !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.3) !important;
+      }
+      ytd-masthead #container,
+      ytd-masthead #background,
+      ytd-masthead > div {
+        background-color: ${mhBgR} !important;
+      }
     `;
     document.head.appendChild(mastheadStyle);
     inner.style.paddingTop = '56px';
