@@ -191,6 +191,33 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true; // async sendResponse
   }
 
+  if (msg.action === 'clickElement') {
+    // Echtes YouTube-Element im MAIN world klicken
+    const tabId = sender.tab?.id;
+    if (!tabId) return;
+
+    chrome.scripting.executeScript({
+      target: { tabId },
+      world: 'MAIN',
+      func: (selector) => {
+        // Mehrere Selektoren (kommagetrennt) probieren
+        const selectors = selector.split(',').map(s => s.trim());
+        for (const sel of selectors) {
+          const el = document.querySelector(sel);
+          if (el) {
+            el.click();
+            console.log('[PageTweaker] Klick auf:', sel);
+            return;
+          }
+        }
+        console.warn('[PageTweaker] Element nicht gefunden:', selector);
+      },
+      args: [msg.selector]
+    }).catch(e => console.error('[PT Background] clickElement error:', e));
+
+    return false;
+  }
+
   if (msg.action === 'loadVideo') {
     // Video wechseln: YouTube SPA-Navigation triggern im MAIN world
     // So werden Empfehlungen, Kommentare etc. auch aktualisiert

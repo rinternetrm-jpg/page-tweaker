@@ -210,26 +210,6 @@
         `;
 
       let mockup;
-      // Versuche echte YouTube-Elemente zu verwenden (voll funktional)
-      function grabRealElement(selectors) {
-        for (const sel of selectors) {
-          const el = document.querySelector(sel);
-          if (el) {
-            // Element aus ytd-app herausnehmen und in unser Layout verschieben
-            el.style.cssText = 'visibility:visible !important; position:relative !important; display:block !important; pointer-events:auto !important; width:100% !important;';
-            // Alle Eltern bis ytd-app auch sichtbar machen
-            let parent = el.parentElement;
-            while (parent && parent.tagName !== 'YTD-APP' && parent !== document.body) {
-              parent.style.setProperty('visibility', 'visible', 'important');
-              parent.style.setProperty('display', 'block', 'important');
-              parent = parent.parentElement;
-            }
-            return el;
-          }
-        }
-        return null;
-      }
-
       switch (item.type) {
         case 'video-player':
           mockup = renderer.renderVideoPlayer(comp.data, item.w, item.h);
@@ -244,78 +224,33 @@
             videoWrapper = wrapper;
           }
           break;
-        case 'video-metadata': {
-          // Echte Metadaten (Like, Dislike, Teilen, Speichern, Clip etc.)
-          const realMeta = grabRealElement([
-            '#above-the-fold #title',
-            'ytd-watch-metadata #title'
-          ]);
-          const realActions = grabRealElement([
-            '#above-the-fold #actions',
-            'ytd-watch-metadata #actions',
-            '#top-level-buttons-computed'
-          ]);
-          const metaContainer = document.createElement('div');
-          metaContainer.className = 'pt-mockup pt-mockup-metadata';
-          metaContainer.style.cssText = 'width:100%;';
-          if (realMeta) metaContainer.appendChild(realMeta);
-          if (realActions) metaContainer.appendChild(realActions);
-          // Fallback auf Mockup wenn echte Elemente nicht gefunden
-          mockup = (realMeta || realActions) ? metaContainer : renderer.renderMetadata(comp.data);
+        case 'video-metadata':
+          mockup = renderer.renderMetadata(comp.data);
+          // Buttons funktional machen (Like, Share etc.)
+          addFunctionalButtons(mockup);
           break;
-        }
-        case 'channel-info': {
-          // Echte Kanal-Info (Abonnieren-Button funktional!)
-          const realChannel = grabRealElement([
-            'ytd-watch-metadata #owner',
-            'ytd-video-owner-renderer',
-            '#above-the-fold #owner'
-          ]);
-          mockup = realChannel || renderer.renderChannelInfo(comp.data);
+        case 'channel-info':
+          mockup = renderer.renderChannelInfo(comp.data);
+          // Abonnieren-Button funktional machen
+          addSubscribeAction(mockup);
           break;
-        }
-        case 'description': {
-          // Echte Beschreibung (ausklappbar)
-          const realDesc = grabRealElement([
-            'ytd-watch-metadata #description-inner',
-            '#description-inline-expander',
-            'ytd-text-inline-expander'
-          ]);
-          mockup = realDesc || renderer.renderDescription(comp.data);
+        case 'description':
+          mockup = renderer.renderDescription(comp.data);
           break;
-        }
-        case 'comments': {
-          // Echte Kommentare (funktional: liken, antworten etc.)
-          const realComments = grabRealElement([
-            'ytd-comments#comments',
-            '#comments'
-          ]);
-          if (realComments) {
-            realComments.style.maxHeight = item.h + 'px';
-            realComments.style.overflowY = 'auto';
-          }
-          mockup = realComments || renderer.renderComments(comp.data, item.options || {});
+        case 'comments':
+          mockup = renderer.renderComments(comp.data, item.options || {});
           break;
-        }
         case 'recommendations':
           mockup = renderer.renderRecommendations(comp.data, item.options || {});
           break;
         case 'playlist':
           mockup = renderer.renderPlaylist(comp.data);
           break;
-        case 'masthead': {
-          // Echte YouTube-Masthead (Profil, Glocke, Erstellen — alles funktional)
-          const realMasthead = grabRealElement([
-            'ytd-masthead#masthead',
-            '#masthead-container',
-            'ytd-masthead'
-          ]);
-          if (realMasthead) {
-            realMasthead.style.cssText = 'visibility:visible !important; position:relative !important; display:flex !important; pointer-events:auto !important; width:100% !important; z-index:1 !important;';
-          }
-          mockup = realMasthead || renderer.renderMasthead(comp.data);
+        case 'masthead':
+          mockup = renderer.renderMasthead(comp.data);
+          // Masthead-Buttons funktional machen
+          addMastheadActions(mockup);
           break;
-        }
         case 'custom-text': {
           // Custom-Text braucht keine Scanner-Daten
           const tb = document.createElement('div');
@@ -434,6 +369,69 @@
           console.error('[PageTweaker] Block', idx, 'Fehler:', err);
         }
       });
+    }
+
+    // === Funktionale Buttons — triggern echte YouTube-Aktionen via MAIN world ===
+    function clickRealButton(selector) {
+      chrome.runtime.sendMessage({
+        action: 'clickElement',
+        selector: selector
+      });
+    }
+
+    function addFunctionalButtons(metaMockup) {
+      // Like-Button
+      metaMockup.querySelectorAll('span').forEach(span => {
+        const text = span.textContent;
+        if (text === '👍') {
+          span.parentElement.style.cursor = 'pointer';
+          span.parentElement.addEventListener('click', () => {
+            clickRealButton('like-button-view-model button, #top-level-buttons-computed ytd-toggle-button-renderer:first-child button');
+          });
+        }
+        if (text === '👎') {
+          span.parentElement.style.cursor = 'pointer';
+          span.parentElement.addEventListener('click', () => {
+            clickRealButton('dislike-button-view-model button, #top-level-buttons-computed ytd-toggle-button-renderer:nth-child(2) button');
+          });
+        }
+        if (text === 'Teilen') {
+          span.style.cursor = 'pointer';
+          span.addEventListener('click', () => {
+            clickRealButton('ytd-menu-renderer button[aria-label*="Teilen"], ytd-menu-renderer button[aria-label*="Share"]');
+          });
+        }
+      });
+    }
+
+    function addSubscribeAction(channelMockup) {
+      // Abonnieren-Button klickbar
+      const subBtn = channelMockup.querySelector('div[style*="cc0000"]');
+      if (subBtn) {
+        subBtn.style.cursor = 'pointer';
+        subBtn.addEventListener('click', () => {
+          clickRealButton('#subscribe-button button, ytd-subscribe-button-renderer button');
+        });
+      }
+    }
+
+    function addMastheadActions(mastheadMockup) {
+      // Glocke → Benachrichtigungen
+      const bell = mastheadMockup.querySelector('div[style*="border-radius:50%"]');
+      if (bell) {
+        bell.style.cursor = 'pointer';
+        bell.addEventListener('click', () => {
+          window.open('https://www.youtube.com/feed/notifications', '_blank');
+        });
+      }
+      // Profilbild → YouTube Studio / Profil
+      const avatar = mastheadMockup.querySelector('div[style*="linear-gradient"]');
+      if (avatar) {
+        avatar.style.cursor = 'pointer';
+        avatar.addEventListener('click', () => {
+          clickRealButton('#avatar-btn, button[aria-label*="Konto"], button[aria-label*="Account"]');
+        });
+      }
     }
 
     // Thumbnails klickbar machen
